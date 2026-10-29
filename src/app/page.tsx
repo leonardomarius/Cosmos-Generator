@@ -1,69 +1,49 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ExampleVideo } from "@/components/ExampleVideo";
+import { PRODUCT, formatPrice } from "@/config/product";
+
+const STEPS = [
+  { title: "1. Ta photo", text: "Envoie une photo nette de ton visage, de face." },
+  { title: "2. Paiement", text: `${formatPrice()} — paiement sécurisé par Stripe.` },
+  { title: "3. Ta vidéo", text: "Reçue par lien et par email en quelques minutes." },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <div className="mx-auto max-w-5xl px-4 py-12">
+      <section className="flex flex-col items-center gap-10 md:flex-row md:items-start md:justify-between">
+        <div className="max-w-lg text-center md:text-left">
+          <h1 className="text-4xl font-extrabold leading-tight sm:text-5xl">
+            {PRODUCT.tagline}
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-4 text-lg text-zinc-400">
+            Une vidéo de {PRODUCT.videoDurationSeconds} secondes où c&apos;est
+            toi qui enchaînes les sauts sur les toits. Aucun texte à écrire.
           </p>
+          <div className="mt-8 flex flex-col items-center gap-3 md:items-start">
+            <Link
+              href="/creer"
+              className="rounded-full bg-orange-500 px-8 py-4 text-lg font-bold text-black hover:bg-orange-400"
+            >
+              Créer ma vidéo — {formatPrice()}
+            </Link>
+            <p className="text-xs text-zinc-500">
+              Paiement unique · Vidéo disponible {PRODUCT.retentionDays} jours ·
+              Photo supprimée sous {PRODUCT.retentionDays} jours
+            </p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <ExampleVideo />
+      </section>
+
+      <section className="mt-16 grid gap-4 sm:grid-cols-3">
+        {STEPS.map((step) => (
+          <div key={step.title} className="rounded-xl border border-white/10 bg-white/5 p-5">
+            <h2 className="font-semibold">{step.title}</h2>
+            <p className="mt-1 text-sm text-zinc-400">{step.text}</p>
+          </div>
+        ))}
+      </section>
     </div>
   );
 }
