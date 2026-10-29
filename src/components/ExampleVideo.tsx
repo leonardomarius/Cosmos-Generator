@@ -9,26 +9,28 @@ export function ExampleVideo() {
   const hasVideo = existsSync(file);
 
   return (
-    <div className="relative aspect-[9/16] w-full max-w-xs overflow-hidden rounded-2xl border border-white/10 bg-zinc-900">
-      {hasVideo ? (
-        <video
-          src={PRODUCT.referenceVideoPath}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <div className="flex h-full items-center justify-center p-6 text-center text-sm text-zinc-500">
-          Vidéo d&apos;exemple à venir
-          <br />
-          (dépose un fichier public/exemple.mp4)
-        </div>
-      )}
-      <span className="absolute bottom-2 right-2 rounded bg-black/60 px-2 py-0.5 text-[10px] text-white/80">
-        Généré par IA
-      </span>
+    <div className="liquid-glass w-full max-w-xs rounded-[32px] p-2">
+      <div className="relative aspect-[9/16] overflow-hidden rounded-[24px] bg-black/40">
+        {hasVideo ? (
+          <video
+            src={PRODUCT.referenceVideoPath}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center p-6 text-center text-sm text-tertiary">
+            Vidéo d&apos;exemple à venir
+            <br />
+            (dépose un fichier public/exemple.mp4)
+          </div>
+        )}
+        <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-medium text-white/85 backdrop-blur-md">
+          Généré par IA
+        </span>
+      </div>
     </div>
   );
 }

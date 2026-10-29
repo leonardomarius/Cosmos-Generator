@@ -12,6 +12,17 @@ export const PRODUCT = {
   referenceVideoPath: "/exemple.mp4",
 } as const;
 
+// Génération via fal.ai : Wan 2.2 Animate en mode "replace".
+// La vidéo de référence doit être en 16 fps : fal facture à la frame,
+// une vidéo en 30 fps coûterait presque deux fois plus cher.
+export const GENERATION = {
+  falModel: "fal-ai/wan/v2.2-14b/animate/replace",
+  resolution: "720p",
+  videoQuality: "high",
+  // Délai entre deux vérifications de l'avancement (côté navigateur).
+  pollIntervalMs: 5000,
+} as const;
+
 export const UPLOAD_RULES = {
   acceptedTypes: ["image/jpeg", "image/png", "image/webp"],
   maxSizeBytes: 10 * 1024 * 1024, // 10 Mo

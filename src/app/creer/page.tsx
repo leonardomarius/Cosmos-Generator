@@ -5,9 +5,9 @@ export const metadata: Metadata = { title: "Créer ma vidéo" };
 
 export default function CreatePage() {
   return (
-    <div className="mx-auto max-w-xl px-4 py-12">
-      <h1 className="text-3xl font-bold">Créer ma vidéo</h1>
-      <p className="mt-2 text-zinc-400">
+    <div className="mx-auto max-w-xl px-5 pb-20 pt-14">
+      <h1 className="text-4xl font-semibold">Créer ma vidéo</h1>
+      <p className="mt-3 text-lg text-secondary">
         Une photo de face, bien éclairée, avec un seul visage visible.
       </p>
       <UploadForm />
