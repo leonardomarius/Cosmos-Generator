@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GENERATION, UPLOAD_RULES, formatPrice } from "@/config/product";
+import { GENERATION, UPLOAD_RULES } from "@/config/product";
 import type { GenerationStatus } from "@/lib/fal";
 
-// Tant que le paiement n'est pas branché, le bouton lance directement
-// la génération, mais uniquement en développement.
-const IS_DEV = process.env.NODE_ENV !== "production";
+type Photo = { file: File; preview: string };
 
 // Vérifications côté navigateur (confort de l'utilisateur).
 // Elles seront refaites côté serveur : on ne fait jamais confiance au navigateur.
@@ -30,7 +28,7 @@ async function checkFile(file: File): Promise<string | null> {
 
 // Réduit la photo (1280 px max, JPEG) avant l'envoi : largement suffisant
 // pour une vidéo 720p, et ça reste sous la limite de taille des requêtes
-// des hébergeurs (4,5 Mo sur Vercel).
+// des hébergeurs (4,5 Mo sur Vercel), même avec deux photos.
 async function shrinkPhoto(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
@@ -45,48 +43,65 @@ async function shrinkPhoto(file: File): Promise<Blob> {
 }
 
 export function UploadForm() {
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [characterUrl, setCharacterUrl] = useState<string | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
   const [generation, setGeneration] = useState<GenerationStatus | null>(null);
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const input = e.target;
-    const picked = input.files?.[0];
+    const picked = Array.from(input.files ?? []);
+    input.value = "";
     setError(null);
-    if (preview) URL.revokeObjectURL(preview);
-    setPreview(null);
-    setFile(null);
-    if (!picked) return;
 
-    const problem = await checkFile(picked);
-    if (problem) {
-      setError(problem);
-      input.value = "";
+    const room = UPLOAD_RULES.maxPhotos - photos.length;
+    if (picked.length > room) {
+      setError(`${UPLOAD_RULES.maxPhotos} photos maximum.`);
       return;
     }
-    setFile(picked);
-    setPreview(URL.createObjectURL(picked));
+    const added: Photo[] = [];
+    for (const file of picked) {
+      const problem = await checkFile(file);
+      if (problem) {
+        added.forEach((p) => URL.revokeObjectURL(p.preview));
+        setError(problem);
+        return;
+      }
+      added.push({ file, preview: URL.createObjectURL(file) });
+    }
+    setPhotos((current) => [...current, ...added]);
+  }
+
+  function removePhoto(index: number) {
+    URL.revokeObjectURL(photos[index].preview);
+    setPhotos((current) => current.filter((_, i) => i !== index));
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!IS_DEV || !file) return;
+    if (photos.length === 0) return;
     setError(null);
-    setGeneration({ status: "queued", position: null });
+    setCharacterUrl(null);
+    setGeneration(null);
+    setStarting(true);
 
     const body = new FormData();
-    body.append("photo", new File([await shrinkPhoto(file)], "photo.jpg", { type: "image/jpeg" }));
+    for (const [i, photo] of photos.entries()) {
+      body.append("photos", new File([await shrinkPhoto(photo.file)], `photo-${i + 1}.jpg`, { type: "image/jpeg" }));
+    }
     body.append("consent", String(consent));
     const res = await fetch("/api/generations", { method: "POST", body });
     const data = await res.json();
+    setStarting(false);
     if (!res.ok) {
-      setGeneration(null);
       setError(data.error);
       return;
     }
+    setCharacterUrl(data.characterUrl);
+    setGeneration({ status: "queued", position: null });
     setRequestId(data.requestId);
   }
 
@@ -109,25 +124,46 @@ export function UploadForm() {
     return () => clearInterval(timer);
   }, [requestId]);
 
-  const busy = generation?.status === "queued" || generation?.status === "running";
-  const canPay = preview !== null && consent && !busy;
+  const busy = starting || generation?.status === "queued" || generation?.status === "running";
+  const canGenerate = photos.length > 0 && consent && !busy;
+  const canAdd = photos.length < UPLOAD_RULES.maxPhotos && !busy;
 
   return (
     <form className="mt-10 space-y-6" onSubmit={onSubmit}>
-      <label className="liquid-glass liquid-glass--interactive flex min-h-48 flex-col items-center justify-center gap-3 rounded-[28px] p-8 text-center focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-white/70">
-        {preview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="Aperçu de ta photo" className="max-h-64 rounded-[20px]" />
-        ) : (
-          <span className="text-secondary">Clique pour choisir ta photo</span>
+      <div className="grid grid-cols-2 gap-4">
+        {photos.map((photo, i) => (
+          <div key={photo.preview} className="liquid-glass relative rounded-[28px] p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={photo.preview} alt={`Photo ${i + 1} du proche`} className="aspect-[3/4] w-full rounded-[20px] object-cover" />
+            {!busy && (
+              <button
+                type="button"
+                onClick={() => removePhoto(i)}
+                aria-label={`Retirer la photo ${i + 1}`}
+                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+        {canAdd && (
+          <label
+            className={`liquid-glass liquid-glass--interactive flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-[28px] p-6 text-center focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-white/70 ${photos.length === 0 ? "col-span-2 aspect-auto min-h-48" : ""}`}
+          >
+            <span className="text-secondary">
+              {photos.length === 0 ? "Clique pour choisir 1 ou 2 photos" : "Ajouter une 2e photo (facultatif)"}
+            </span>
+            <input
+              type="file"
+              accept={UPLOAD_RULES.acceptedTypes.join(",")}
+              multiple={photos.length === 0}
+              onChange={onFileChange}
+              className="sr-only"
+            />
+          </label>
         )}
-        <input
-          type="file"
-          accept={UPLOAD_RULES.acceptedTypes.join(",")}
-          onChange={onFileChange}
-          className="sr-only"
-        />
-      </label>
+      </div>
 
       {error && (
         <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
@@ -142,33 +178,40 @@ export function UploadForm() {
           required
         />
         <span>
-          Je certifie être la personne sur la photo, ou avoir son accord
+          Je certifie être la personne sur les photos, ou avoir son accord
           explicite, et qu&apos;elle est majeure.
         </span>
       </label>
 
       <button
         type="submit"
-        disabled={!canPay}
+        disabled={!canGenerate}
         className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-lg font-semibold disabled:opacity-60 disabled:saturate-50"
       >
-        {IS_DEV ? "Générer (test sans paiement)" : `Payer ${formatPrice()}`}
+        Générer la vidéo
       </button>
-      {!IS_DEV && (
-        <p className="text-center text-xs text-tertiary">
-          Le paiement sera branché à une prochaine étape.
+
+      {starting && (
+        <p className="text-center text-sm text-secondary">
+          Création du personnage à partir des photos…
         </p>
       )}
-
+      {characterUrl && generation?.status !== "done" && (
+        <figure className="liquid-glass mx-auto w-48 rounded-[24px] p-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={characterUrl} alt="Personnage créé pour la vidéo" className="w-full rounded-[18px]" />
+          <figcaption className="py-1 text-center text-xs text-tertiary">Personnage créé</figcaption>
+        </figure>
+      )}
       {generation?.status === "queued" && (
         <p className="text-center text-sm text-secondary">
-          En file d&apos;attente
+          Vidéo en file d&apos;attente
           {generation.position !== null && ` (position ${generation.position + 1})`}…
         </p>
       )}
       {generation?.status === "running" && (
         <p className="text-center text-sm text-secondary">
-          Génération en cours, compte quelques minutes…
+          Génération de la vidéo en cours, compte quelques minutes…
         </p>
       )}
       {generation?.status === "failed" && (

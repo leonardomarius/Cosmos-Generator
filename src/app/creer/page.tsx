@@ -8,7 +8,9 @@ export default function CreatePage() {
     <div className="mx-auto max-w-xl px-5 pb-20 pt-14">
       <h1 className="text-4xl font-semibold">Créer ma vidéo</h1>
       <p className="mt-3 text-lg text-secondary">
-        Une photo de face, bien éclairée, avec un seul visage visible.
+        Une ou deux photos du proche à faire apparaître, nettes et bien
+        éclairées, avec une seule personne visible. Idéalement : une de face,
+        et une en pied.
       </p>
       <UploadForm />
     </div>

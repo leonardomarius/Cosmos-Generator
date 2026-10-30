@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { ExampleVideo } from "@/components/ExampleVideo";
-import { PRODUCT, formatPrice } from "@/config/product";
+import { PRODUCT } from "@/config/product";
 
 const STEPS = [
-  { title: "1. Ta photo", text: "Envoie une photo nette de ton visage, de face." },
-  { title: "2. Paiement", text: `${formatPrice()} — paiement sécurisé par Stripe.` },
-  { title: "3. Ta vidéo", text: "Reçue par lien et par email en quelques minutes." },
+  { title: "1. Les photos", text: "Envoie 1 ou 2 photos nettes du proche à faire apparaître." },
+  { title: "2. Génération", text: "L'IA le place dans la vidéo, dans la même pose et la même tenue." },
+  { title: "3. La vidéo", text: "Prête en quelques minutes, à regarder et télécharger." },
 ];
 
 // Icônes décoratives des étapes (même ordre que STEPS).
@@ -24,19 +24,19 @@ export default function Home() {
             {PRODUCT.tagline}
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-secondary sm:text-xl">
-            Une vidéo de {PRODUCT.videoDurationSeconds} secondes où c&apos;est
-            toi qui enchaînes les sauts sur les toits. Aucun texte à écrire.
+            Une vidéo de {PRODUCT.videoDurationSeconds} secondes où ton proche
+            enchaîne les figures. 1 ou 2 photos suffisent, aucun texte à écrire.
           </p>
           <div className="mt-10 flex flex-col items-center gap-4 md:items-start">
             <Link
               href="/creer"
               className="liquid-glass liquid-glass--interactive liquid-glass--accent rounded-full px-8 py-4 text-lg font-semibold"
             >
-              Créer ma vidéo — {formatPrice()}
+              Créer ma vidéo
             </Link>
             <p className="text-xs text-tertiary">
-              Paiement unique · Vidéo disponible {PRODUCT.retentionDays} jours ·
-              Photo supprimée sous {PRODUCT.retentionDays} jours
+              Phase de test · Vidéo disponible {PRODUCT.retentionDays} jours ·
+              Photos supprimées sous {PRODUCT.retentionDays} jours
             </p>
           </div>
         </div>
