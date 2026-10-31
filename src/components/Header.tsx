@@ -8,12 +8,20 @@ export function Header() {
         <Link href="/" className="whitespace-nowrap text-[15px] font-semibold tracking-tight pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center sm:text-[17px]">
           {PRODUCT.siteName}
         </Link>
-        <Link
-          href="/creer"
-          className="liquid-glass liquid-glass--interactive liquid-glass--accent whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center sm:px-4"
-        >
-          Créer ma vidéo
-        </Link>
+        <nav className="flex items-center gap-1 sm:gap-2">
+          <Link
+            href="/compte"
+            className="whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold text-secondary pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+          >
+            Compte
+          </Link>
+          <Link
+            href="/creer"
+            className="liquid-glass liquid-glass--interactive liquid-glass--accent whitespace-nowrap rounded-full px-3 py-2 text-sm font-semibold pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center sm:px-4"
+          >
+            Créer ma vidéo
+          </Link>
+        </nav>
       </div>
     </header>
   );

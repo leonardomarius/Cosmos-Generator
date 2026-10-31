@@ -1,10 +1,15 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { GENERATION, UPLOAD_RULES } from "@/config/product";
+import { GENERATION, UPLOAD_RULES, VIDEO_MODELS, type VideoModelId } from "@/config/product";
 import type { GenerationStatus } from "@/lib/fal";
 
 type Photo = { file: File; preview: string };
+
+// Modèle unique de génération.
+const MODEL: VideoModelId = "kling4";
 
 // Vérifications côté navigateur (confort de l'utilisateur).
 // Elles seront refaites côté serveur : on ne fait jamais confiance au navigateur.
@@ -26,12 +31,12 @@ async function checkFile(file: File): Promise<string | null> {
   return null;
 }
 
-// Réduit la photo (1280 px max, JPEG) avant l'envoi : largement suffisant
-// pour une vidéo 720p, et ça reste sous la limite de taille des requêtes
-// des hébergeurs (4,5 Mo sur Vercel), même avec deux photos.
+// Réduit la photo (2048 px max, JPEG) avant l'envoi : assez pour garder les
+// détails du visage sur une photo en pied, et ça reste sous la limite de
+// taille des requêtes des hébergeurs (4,5 Mo sur Vercel), même avec deux photos.
 async function shrinkPhoto(file: File): Promise<Blob> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, 2048 / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
@@ -42,13 +47,19 @@ async function shrinkPhoto(file: File): Promise<Blob> {
   );
 }
 
-export function UploadForm() {
+// email : celui du compte, où la vidéo est envoyée.
+// balance : solde de tokens, relu côté serveur après chaque génération.
+export function UploadForm({ email, balance }: { email: string; balance: number }) {
+  const router = useRouter();
+  const cost = VIDEO_MODELS[MODEL].tokens;
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
+  // Adresse à laquelle la vidéo sera envoyée, une fois la génération lancée.
+  const [notifiedEmail, setNotifiedEmail] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
-  const [characterUrl, setCharacterUrl] = useState<string | null>(null);
-  const [requestId, setRequestId] = useState<string | null>(null);
+  // Modèle de la génération en cours : c'est lui qu'on interroge pour le suivi.
+  const [job, setJob] = useState<{ requestId: string; model: VideoModelId } | null>(null);
   const [generation, setGeneration] = useState<GenerationStatus | null>(null);
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -84,8 +95,8 @@ export function UploadForm() {
     e.preventDefault();
     if (photos.length === 0) return;
     setError(null);
-    setCharacterUrl(null);
     setGeneration(null);
+    setNotifiedEmail(null);
     setStarting(true);
 
     const body = new FormData();
@@ -93,23 +104,27 @@ export function UploadForm() {
       body.append("photos", new File([await shrinkPhoto(photo.file)], `photo-${i + 1}.jpg`, { type: "image/jpeg" }));
     }
     body.append("consent", String(consent));
+    body.append("model", MODEL);
     const res = await fetch("/api/generations", { method: "POST", body });
     const data = await res.json();
     setStarting(false);
+    // Tokens retirés (ou rendus après un échec) : on relit le solde.
+    router.refresh();
     if (!res.ok) {
       setError(data.error);
       return;
     }
-    setCharacterUrl(data.characterUrl);
+    // En local sans PUBLIC_BASE_URL, aucun email ne part : on ne le promet pas.
+    setNotifiedEmail(data.emailNotification ? email : null);
     setGeneration({ status: "queued", position: null });
-    setRequestId(data.requestId);
+    setJob({ requestId: data.requestId, model: MODEL });
   }
 
   // Vérifie régulièrement l'avancement jusqu'à la fin de la génération.
   useEffect(() => {
-    if (!requestId) return;
+    if (!job) return;
     const timer = setInterval(async () => {
-      const res = await fetch(`/api/generations/${requestId}`);
+      const res = await fetch(`/api/generations/${job.requestId}?model=${job.model}`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error);
@@ -118,14 +133,16 @@ export function UploadForm() {
       setGeneration(data);
       if (data.status === "done" || data.status === "failed") {
         clearInterval(timer);
-        setRequestId(null);
+        setJob(null);
+        router.refresh();
       }
     }, GENERATION.pollIntervalMs);
     return () => clearInterval(timer);
-  }, [requestId]);
+  }, [job, router]);
 
   const busy = starting || generation?.status === "queued" || generation?.status === "running";
-  const canGenerate = photos.length > 0 && consent && !busy;
+  const enoughTokens = balance >= cost;
+  const canGenerate = photos.length > 0 && consent && enoughTokens && !busy;
   const canAdd = photos.length < UPLOAD_RULES.maxPhotos && !busy;
 
   return (
@@ -134,7 +151,7 @@ export function UploadForm() {
         {photos.map((photo, i) => (
           <div key={photo.preview} className="liquid-glass relative rounded-[28px] p-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo.preview} alt={`Photo ${i + 1} du proche`} className="aspect-[3/4] w-full rounded-[20px] object-cover" />
+            <img src={photo.preview} alt={i === 0 ? "Photo en pied du proche" : "Gros plan du visage du proche"} className="aspect-[3/4] w-full rounded-[20px] object-cover" />
             {!busy && (
               <button
                 type="button"
@@ -152,12 +169,13 @@ export function UploadForm() {
             className={`liquid-glass liquid-glass--interactive flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-[28px] p-6 text-center focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-white/70 ${photos.length === 0 ? "col-span-2 aspect-auto min-h-48" : ""}`}
           >
             <span className="text-secondary">
-              {photos.length === 0 ? "Clique pour choisir 1 ou 2 photos" : "Ajouter une 2e photo (facultatif)"}
+              {photos.length === 0
+                ? "Photo 1 : la personne en pied, de face"
+                : "Photo 2 (facultatif) : gros plan du visage"}
             </span>
             <input
               type="file"
               accept={UPLOAD_RULES.acceptedTypes.join(",")}
-              multiple={photos.length === 0}
               onChange={onFileChange}
               className="sr-only"
             />
@@ -168,6 +186,7 @@ export function UploadForm() {
       {error && (
         <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
       )}
+
 
       <label className="liquid-glass flex items-start gap-3 rounded-[24px] p-5 text-sm leading-relaxed text-secondary">
         <input
@@ -188,20 +207,28 @@ export function UploadForm() {
         disabled={!canGenerate}
         className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-lg font-semibold disabled:opacity-60 disabled:saturate-50"
       >
-        Générer la vidéo
+        Générer la vidéo · {cost} tokens
       </button>
+      <p className="text-center text-sm text-secondary">
+        Solde : <strong className="text-white">{balance} tokens</strong>
+        {!enoughTokens && (
+          <>
+            {" "}· pas assez pour une vidéo.{" "}
+            <Link href="/abonnement" className="underline underline-offset-4">Voir les abonnements</Link>
+          </>
+        )}
+      </p>
 
       {starting && (
         <p className="text-center text-sm text-secondary">
-          Création du personnage à partir des photos…
+          Envoi des photos…
         </p>
       )}
-      {characterUrl && generation?.status !== "done" && (
-        <figure className="liquid-glass mx-auto w-48 rounded-[24px] p-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={characterUrl} alt="Personnage créé pour la vidéo" className="w-full rounded-[18px]" />
-          <figcaption className="py-1 text-center text-xs text-tertiary">Personnage créé</figcaption>
-        </figure>
+      {notifiedEmail && (generation?.status === "queued" || generation?.status === "running") && (
+        <p className="liquid-glass rounded-[24px] px-5 py-4 text-center text-sm leading-relaxed text-secondary">
+          C&apos;est lancé ! Tu peux fermer cette page : la vidéo sera envoyée à{" "}
+          <strong className="text-white">{notifiedEmail}</strong> dès qu&apos;elle sera prête.
+        </p>
       )}
       {generation?.status === "queued" && (
         <p className="text-center text-sm text-secondary">
@@ -220,7 +247,7 @@ export function UploadForm() {
         </p>
       )}
       {generation?.status === "done" && (
-        <video src={generation.videoUrl} controls autoPlay loop className="w-full rounded-[28px] shadow-2xl shadow-black/50" />
+        <video src={generation.videoUrl} controls autoPlay loop className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-[28px] shadow-2xl shadow-black/50" />
       )}
     </form>
   );

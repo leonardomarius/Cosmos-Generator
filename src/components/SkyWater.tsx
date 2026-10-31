@@ -11,12 +11,14 @@ import { useEffect, useRef } from "react";
 // - Une vague plus fine qu'un pixel n'est pas effacée : sa pente devient de la
 //   rugosité. Au loin, les reflets s'étirent et le soleil trace un chemin de
 //   lumière qui scintille ; au premier plan, il donne des paillettes nettes.
-// - Reflets du ciel et des nuages (Fresnel), bleu profond sous la surface,
-//   brume à l'horizon, caméra qui dérive et flotte très légèrement, grain.
+// - Fin de journée sous un ciel couvert : soleil bas à gauche qui perce une
+//   nappe d'altocumulus dorés, volcan enneigé et collines noyés dans la brume.
+// - Reflets du ciel et des nuages (Fresnel), mer sombre sous la surface,
+//   caméra qui dérive et flotte très légèrement, grain.
 // Le curseur laisse dans l'eau des ronds qui se propagent comme des vrais.
 
 const TAU = Math.PI * 2;
-const HORIZON = 0.2; // horizon à 30 % du bas de l'écran
+const HORIZON = 0.047; // horizon à 45 % du bas de l'écran
 const FOCAL = 1.6;
 const GRAVITY = 2.45; // unité de longueur : hauteur de la caméra (≈ 4 m)
 const TENSION = 1.1e-6; // tension superficielle, mêmes unités
@@ -29,17 +31,11 @@ const RIPPLE_REUSE = 3.6; // âge à partir duquel un rond presque éteint peut 
 const RIPPLE_SIZE = 0.16;
 const DRIFT = 0.22; // avance de la caméra, unités/s
 
-// Soleil haut, devant à droite (hors cadre) : son scintillement reste sur le
-// bord droit, à l'écart du texte.
-const SUN = direction(0.52, 0.6);
-
-function direction(azimuth: number, elevation: number) {
-  return [
-    Math.cos(elevation) * Math.sin(azimuth),
-    Math.sin(elevation),
-    Math.cos(elevation) * Math.cos(azimuth),
-  ];
-}
+// Cadrage repris quel que soit le format d'écran : soleil à 20 % de la
+// largeur, sommet du volcan à 59 % (positions horizontales, en fraction).
+const SUN_X = 0.2;
+const SUN_HEIGHT = 0.18; // au-dessus de l'horizon, en hauteur d'écran
+const PEAK_X = 0.59;
 
 const num = (n: number) => n.toFixed(6);
 const vec3 = (v: number[]) => `vec3(${v.map(num).join(", ")})`;
@@ -76,7 +72,7 @@ function buildWaves(): Wave[] {
     // Houle à crêtes courtes autour du vent, petites rides dans tous les sens.
     const angle = wind + (0.9 + 0.6 * f) * (rand() + rand() - 1) * 1.2;
     // Comme en mer réelle, l'essentiel de la pente vient des petites rides.
-    const steep = (0.008 + 0.046 * f) * (0.7 + 0.6 * rand());
+    const steep = (0.02 + 0.05 * f) * (0.7 + 0.6 * rand());
     const dx = Math.sin(angle);
     const dz = Math.cos(angle);
     // Profil exp(sin θ − 1) : même pente moyenne qu'une sinusoïde de pente "steep".
@@ -129,26 +125,32 @@ precision highp float;
 uniform vec2 uRes;
 uniform float uTime;
 uniform vec4 uCam; // x, y : visée ; z : hauteur de la caméra
+uniform vec3 uSun; // direction du soleil (dépend du format d'écran)
+uniform float uPeak; // position horizontale du volcan (tangente)
 uniform vec4 uPhase[${WAVE_COUNT / 4}];
 uniform vec4 uRipples[${MAX_RIPPLES}]; // position relative, âge, intensité
 
+#define SUN uSun
 const float PI = 3.14159265;
 const float HORIZON = ${num(HORIZON)};
 const float FOCAL = ${num(FOCAL)};
 const float GRAVITY = ${num(GRAVITY)};
 const float RIPPLE_SIZE = ${num(RIPPLE_SIZE)};
 const float DRAG = ${num(DRAG)};
-const vec3 SUN = ${vec3(SUN)};
-const vec3 SUN_COL = vec3(1.0, 0.95, 0.88);
-const float SUN_POWER = 0.7;
+const vec3 SUN_COL = vec3(1.0, 0.72, 0.4);
+const float SUN_POWER = 0.6;
 
-const vec3 ZENITH = ${srgb(0.03, 0.13, 0.34)};
-const vec3 MID = ${srgb(0.1, 0.29, 0.57)};
-const vec3 HAZE = ${srgb(0.46, 0.61, 0.8)};
-const vec3 CLOUD_LIT = ${srgb(0.97, 0.97, 0.98)};
-const vec3 CLOUD_SHADE = ${srgb(0.52, 0.6, 0.73)};
-const vec3 DEEP = ${srgb(0.01, 0.08, 0.23)};
-const vec3 SCATTER = ${srgb(0.02, 0.2, 0.32)};
+const vec3 ZENITH = ${srgb(0.3, 0.33, 0.42)};
+const vec3 HAZE = ${srgb(0.6, 0.63, 0.7)};
+const vec3 GLOW = ${srgb(1.0, 0.84, 0.52)};
+const vec3 CLOUD_LIT = ${srgb(0.64, 0.66, 0.72)};
+const vec3 CLOUD_SHADE = ${srgb(0.35, 0.38, 0.45)};
+const vec3 SNOW = ${srgb(0.84, 0.86, 0.91)};
+const vec3 SNOW_SHADE = ${srgb(0.58, 0.63, 0.73)};
+const vec3 ROCK = ${srgb(0.3, 0.35, 0.45)};
+const vec3 HILLS = ${srgb(0.42, 0.47, 0.56)};
+const vec3 DEEP = ${srgb(0.03, 0.07, 0.16)};
+const vec3 SCATTER = ${srgb(0.05, 0.12, 0.2)};
 
 float hash(vec2 p) {
   p = fract(p * vec2(123.34, 456.21));
@@ -180,47 +182,95 @@ float fbm(vec2 p, float detail) {
   return v;
 }
 
+// Ciel voilé, gris bleuté ; le soleil bas dore tout l'horizon de son côté.
 vec3 skyGradient(vec3 d) {
   float e = max(d.y, 0.0);
-  vec3 col = ZENITH + (MID - ZENITH) * exp(-e * 3.2) + (HAZE - MID) * exp(-e * 18.0);
-  float mu = max(dot(d, SUN), 0.0);
-  col += vec3(0.75, 0.85, 1.0) * (0.04 * pow(mu, 6.0) + 0.08 * pow(mu, 48.0));
-  return mix(col, HAZE, exp(-e * 25.0) * 0.3);
+  vec3 col = mix(HAZE, ZENITH, 1.0 - exp(-e * 5.0));
+  float ang = acos(clamp(dot(d, SUN), -1.0, 1.0));
+  float side = max(dot(normalize(d.xz + 1e-5), normalize(SUN.xz)), 0.0);
+  return col + GLOW * (0.22 * exp(-ang / 0.3) + 0.4 * exp(-ang / 0.07) + 0.2 * pow(side, 16.0) * exp(-e * 8.0));
 }
 
-// Cirrus d'altitude : voiles fibreux étirés par le vent, semi-transparents.
+// Nappe d'altocumulus : cellules pommelées à ventre sombre, liserés dorés du
+// côté du soleil, qui se fondent dans la brume vers l'horizon.
 // "blur" adoucit leur reflet sur une eau agitée.
 vec4 clouds(vec3 d, float blur) {
-  if (d.y < 0.01) return vec4(0.0);
+  if (d.y < 0.005) return vec4(0.0);
   float dist = 1.0 / d.y;
-  vec2 uv = d.xz * dist * 0.3 + vec2(uTime * 0.006, uTime * 0.0015);
-  vec2 sp = mat2(0.94, -0.34, 0.34, 0.94) * uv;
-  float detail = clamp(7.0 - log2(dist) * 1.3 - blur * 12.0, 1.0, 7.0);
-  float warp = fbm(sp * vec2(0.6, 1.2) + 4.7, 3.0);
-  float mass = fbm(sp * vec2(0.45, 1.3) + vec2(warp * 1.2, 0.0), 4.0);
-  float fib = fbm(sp * vec2(1.2, 7.0) + vec2(warp * 3.0, mass * 2.0), detail);
-  float n = mass + (fib - 0.5) * 0.55;
-  float cover = smoothstep(0.5, 0.78, n);
-  if (cover <= 0.0) return vec4(0.0);
-  float mu = max(dot(d, SUN), 0.0);
-  vec3 c = mix(CLOUD_SHADE, CLOUD_LIT, 0.65 + 0.35 * smoothstep(0.6, 0.85, n)) + SUN_COL * pow(mu, 5.0) * 0.5;
-  return vec4(c, cover * 0.75 * exp(-dist * 0.04));
+  vec2 uv = d.xz * dist * 1.2 + vec2(uTime * 0.012, uTime * 0.004);
+  float detail = clamp(7.0 - log2(dist) * 1.2 - blur * 12.0, 1.0, 7.0);
+  float cover = fbm(uv * 0.22 + 3.1, 3.0);
+  vec2 warp = vec2(fbm(uv * 0.8 + 7.0, 2.0), fbm(uv * 0.8 + 1.3, 2.0));
+  float dens = fbm(uv * vec2(3.5, 4.5) + warp * 0.8, detail) + (cover - 0.5) * 0.9;
+  float a = smoothstep(0.3, 0.55, dens);
+  if (a <= 0.0) return vec4(0.0);
+  float thick = smoothstep(0.5, 0.78, dens);
+  float ang = acos(clamp(dot(d, SUN), -1.0, 1.0));
+  float warm = exp(-ang / 0.35);
+  vec3 c = mix(CLOUD_LIT, CLOUD_SHADE, thick);
+  c = mix(c, c * GLOW * 1.5, warm * 0.8) + GLOW * (1.2 * exp(-ang / 0.06) + 0.35 * warm) * (1.0 - thick);
+  return vec4(c, a * mix(0.45, 0.95, exp(-dist * 0.06)));
 }
 
-vec3 sky(vec3 d, float blur, float mask) {
-  vec4 c = clouds(d, blur);
-  return mix(skyGradient(d), c.rgb, c.a * mask);
+vec3 sunGlow(vec3 d) {
+  float ang = length(d - SUN);
+  return SUN_COL * (6.0 * smoothstep(0.011, 0.007, ang) + 0.8 * exp(-ang / 0.018) + 0.5 * exp(-ang / 0.08));
+}
+
+vec3 sky(vec3 d) {
+  vec4 c = clouds(d, 0.0);
+  return mix(skyGradient(d), c.rgb, c.a) + sunGlow(d) * (1.0 - 0.6 * c.a);
+}
+
+// Volcan, collines et brume basse en coordonnées tangentes (t.x vers la
+// droite, t.y au-dessus de l'horizon), posés sur le ciel "col".
+vec3 land(vec2 t, vec3 d, vec3 col, float px) {
+  vec3 air = skyGradient(d);
+
+  // Volcan : flancs légèrement concaves, cratère plat, arêtes irrégulières.
+  float x = t.x - uPeak;
+  float ax = abs(x);
+  float prof = 0.166 * exp(-max(ax - 0.018, 0.0) / (x < 0.0 ? 0.23 : 0.21));
+  prof += 0.004 * (noise(vec2(x * 40.0, 1.7)) - 0.5) * smoothstep(0.02, 0.08, ax);
+  prof -= 0.0015 * smoothstep(0.018, 0.0, ax) * noise(vec2(x * 300.0, 3.0));
+  float m = smoothstep(prof + px, prof - px, t.y);
+  if (m > 0.0) {
+    // Ravines qui rayonnent depuis le sommet : la neige y descend en coulées.
+    float below = 0.166 - t.y;
+    float gully = fbm(vec2(x / (below + 0.05) * 14.0, below * 10.0), 5.0);
+    float snow = smoothstep(-0.003, 0.003, t.y - 0.112 + 0.025 * (gully - 0.5) + 0.25 * x * x);
+    // Flanc gauche tourné vers le soleil, arêtes fines plus sombres.
+    float ridge = noise(vec2(x / (below + 0.02) * 90.0, below * 25.0));
+    float lit = mix(1.0, 0.35, smoothstep(-0.03, 0.04, x)) * (0.8 + 0.2 * ridge + 0.2 * gully);
+    vec3 c = mix(ROCK * (0.8 + 0.3 * lit), mix(SNOW_SHADE, SNOW, lit), snow);
+    // Air entre nous et le volcan, de plus en plus épais vers sa base.
+    c = mix(c, air, 0.4 + 0.5 * smoothstep(0.11, 0.02, t.y));
+    col = mix(col, c, m);
+  }
+
+  // Collines lointaines, plus hautes à droite du volcan.
+  float hill = 0.018 + 0.03 * fbm(vec2(t.x * 9.0, 0.5), 4.0) + 0.03 * smoothstep(0.12, 0.3, x);
+  float hm = smoothstep(hill + px, hill - px, t.y);
+  col = mix(col, mix(HILLS, air, 0.35 + 0.4 * smoothstep(0.07, 0.0, t.y)), hm);
+
+  // Brume posée sur la mer et lambeaux de nuages accrochés au pied du volcan.
+  float fog = exp(-max(t.y, 0.0) / 0.02);
+  float streak = fbm(vec2(t.x * 5.0 + uTime * 0.003, t.y * 60.0), 4.0);
+  float band = exp(-pow((t.y - 0.06) / 0.035, 2.0)) * smoothstep(0.55, 0.75, streak);
+  col = mix(col, air * 1.05, clamp(fog * 0.85, 0.0, 1.0));
+  return mix(col, mix(air, CLOUD_LIT * 1.1, 0.4), band * 0.7);
 }
 
 // Reflet du ciel par une eau dont les rides fines (non résolues) éparpillent
 // la lumière : dégradé moyenné sur la hauteur de la tache de reflet. Ce qui
 // part sous l'horizon rencontre une autre vague et prend la teinte du large.
 vec3 reflection(vec3 rd, float spread, float blur) {
+  vec3 low = skyGradient(normalize(vec3(rd.x, 0.0, rd.z))) * 0.55;
   vec3 acc = vec3(0.0);
   for (int i = -1; i <= 1; i++) {
     float e = rd.y + float(i) * spread;
     vec3 c = skyGradient(normalize(vec3(rd.x, max(e, 0.0), rd.z)));
-    acc += mix(c, HAZE * 0.6, smoothstep(0.0, -0.08, e)) * (i == 0 ? 0.5 : 0.25);
+    acc += mix(c, low, smoothstep(0.0, -0.08, e)) * (i == 0 ? 0.5 : 0.25);
   }
   vec4 cl = clouds(normalize(vec3(rd.x, max(rd.y, 0.0), rd.z)), blur);
   return mix(acc, cl.rgb, cl.a);
@@ -257,9 +307,7 @@ void main() {
   vec3 col;
 
   if (r.y >= 0.0) {
-    // Moins de nuages derrière le texte (gauche sur grand écran, partout sur mobile).
-    float mask = uRes.x < uRes.y ? 0.6 : mix(0.45, 1.0, smoothstep(0.35, 0.8, uv.x));
-    col = sky(d, 0.0, mask);
+    col = land(r.xy / FOCAL, d, sky(d), 1.0 / (uRes.y * FOCAL));
   } else {
     float s = uCam.z / -r.y;
     vec2 local = r.xz * s;   // point d'eau visé, relatif à la caméra
@@ -295,7 +343,8 @@ ${waveCode()}
 
     vec2 along = normalize(d.xz);
     float spread = 2.4 * sqrt(along.x * along.x * v.x + along.y * along.y * v.y);
-    vec3 refl = reflection(reflect(d, n), spread, rough);
+    // Sous la nappe nuageuse, les pentes renvoient surtout un ciel sombre.
+    vec3 refl = reflection(reflect(d, n), spread, rough) * 0.38;
     float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, V), 0.0), 5.0);
 
     // Lumière qui remonte de l'eau : bleu profond, crêtes éclairées par transparence.
@@ -321,7 +370,8 @@ ${waveCode()}
     water += SUN_COL * spec * mix(1.0, sparkle, unresolved * 0.85);
 
     float dist = s * length(r);
-    col = mix(water, HAZE * 0.88, 1.0 - exp(-dist * 0.012));
+    vec3 mist = skyGradient(normalize(vec3(d.x, 0.0, d.z))) * 0.7;
+    col = mix(water, mist, 1.0 - exp(-dist * 0.012));
   }
 
   col = pow(tonemap(col), vec3(1.0 / 2.2));
@@ -343,12 +393,12 @@ function compile(gl: WebGLRenderingContext, type: number, source: string) {
   return shader;
 }
 
-// Caméra tenue à la main sur un bateau qui avance lentement.
+// Caméra tenue à la main sur un bateau qui avance lentement, au ras de l'eau.
 function camera(t: number) {
   return {
     x: 0.35 * Math.sin(t * 0.031),
     z: t * DRIFT,
-    height: 1 + 0.012 * Math.sin(t * 0.53) + 0.006 * Math.sin(t * 1.21 + 1.3),
+    height: 0.55 + 0.012 * Math.sin(t * 0.53) + 0.006 * Math.sin(t * 1.21 + 1.3),
     viewX: 0.0022 * Math.sin(t * 0.23 + 0.4) + 0.0009 * Math.sin(t * 0.71 + 2),
     viewY: 0.0028 * Math.sin(t * 0.47 + 2.1) + 0.0012 * Math.sin(t * 1.07 + 0.7),
   };
@@ -386,6 +436,8 @@ export function SkyWater() {
     const uRes = gl.getUniformLocation(program, "uRes");
     const uTime = gl.getUniformLocation(program, "uTime");
     const uCam = gl.getUniformLocation(program, "uCam");
+    const uSun = gl.getUniformLocation(program, "uSun");
+    const uPeak = gl.getUniformLocation(program, "uPeak");
     const uPhase = gl.getUniformLocation(program, "uPhase");
     const uRipples = gl.getUniformLocation(program, "uRipples");
 
@@ -413,6 +465,10 @@ export function SkyWater() {
       canvas.height = Math.round(h * scale);
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.uniform2f(uRes, canvas.width, canvas.height);
+      const sunX = (SUN_X - 0.5) * (w / h);
+      const len = Math.hypot(sunX, SUN_HEIGHT, FOCAL);
+      gl.uniform3f(uSun, sunX / len, SUN_HEIGHT / len, FOCAL / len);
+      gl.uniform1f(uPeak, ((PEAK_X - 0.5) * (w / h)) / FOCAL);
     };
 
     const draw = () => {

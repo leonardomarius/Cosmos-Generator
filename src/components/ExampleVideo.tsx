@@ -10,7 +10,7 @@ export function ExampleVideo() {
 
   return (
     <div className="liquid-glass w-full max-w-[min(20rem,calc(85dvh*9/16))] rounded-[32px] p-2">
-      <div className="relative aspect-[3/4] overflow-hidden rounded-[24px] bg-black/40">
+      <div className="relative aspect-[9/16] overflow-hidden rounded-[24px] bg-black/40">
         {hasVideo ? (
           <video
             src={PRODUCT.referenceVideoPath}

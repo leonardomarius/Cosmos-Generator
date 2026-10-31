@@ -1,7 +1,7 @@
 ﻿@import "tailwindcss";
 
 :root {
-  --background: #0a2c5e;
+  --background: #141d2e;
   --foreground: #ffffff;
   --label-secondary: rgb(255 255 255 / 0.82);
   --label-tertiary: rgb(255 255 255 / 0.8);
@@ -54,7 +54,7 @@ h1 {
   z-index: -1;
   pointer-events: none;
   /* Repli sans WebGL, et avant le premier rendu */
-  background: linear-gradient(#092661 0%, #1c4d94 40%, #4f73a8 66%, #6b91c4 70%, #3a5f8f 72%, #061a3a 100%);
+  background: linear-gradient(#5d6577 0%, #8d909c 35%, #b4b3b6 54.5%, #6c7487 55%, #2a3549 75%, #141d2e 100%);
 }
 
 .scene canvas {
