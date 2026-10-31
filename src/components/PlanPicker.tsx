@@ -31,7 +31,7 @@ export function PlanPicker() {
       setError(data.error);
       return;
     }
-    // Page de paiement (ou portail) hébergée par Stripe.
+    // Page de paiement Mollie, ou le compte après un changement de plan.
     window.location.assign(data.url);
   }
 

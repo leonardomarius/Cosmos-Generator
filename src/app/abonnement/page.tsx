@@ -13,7 +13,7 @@ export default function PlansPage() {
         tokens te sont rendus. Résiliable à tout moment depuis ton compte.
       </p>
       <PlanPicker />
-      <p className="mt-6 text-sm text-secondary">Prix TTC. Paiement sécurisé par Stripe.</p>
+      <p className="mt-6 text-sm text-secondary">Prix TTC. Paiement sécurisé par Mollie (carte ou prélèvement SEPA).</p>
     </div>
   );
 }

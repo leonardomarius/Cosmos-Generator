@@ -64,10 +64,9 @@ export function isVideoModelId(value: unknown): value is VideoModelId {
   return typeof value === "string" && Object.hasOwn(VIDEO_MODELS, value);
 }
 
-// Abonnements mensuels. Le solde est remis au quota à chaque facture payée :
+// Abonnements mensuels. Le solde est remis au quota à chaque paiement reçu :
 // les tokens non utilisés ne sont pas reportés.
-// Le prix affiché doit être celui du prix Stripe (TTC, en euros) dont
-// l'identifiant est dans la variable d'environnement "stripePriceEnv".
+// "priceEur" est le montant TTC prélevé chaque mois par Mollie.
 // Marge visée : au moins 50 % du HT même si tout le quota est utilisé
 // (calcul dans scripts/economics.mjs).
 export const PLANS = {
@@ -75,23 +74,25 @@ export const PLANS = {
     label: "Essentiel",
     priceEur: 9.99,
     monthlyTokens: 10,
-    stripePriceEnv: "STRIPE_PRICE_ESSENTIEL",
   },
   star: {
     label: "Star",
     priceEur: 24.99,
     monthlyTokens: 30,
-    stripePriceEnv: "STRIPE_PRICE_STAR",
   },
   producteur: {
     label: "Producteur",
     priceEur: 49.99,
     monthlyTokens: 70,
-    stripePriceEnv: "STRIPE_PRICE_PRODUCTEUR",
   },
 } as const;
 
 export type PlanId = keyof typeof PLANS;
+
+// Email de contact public (SUPPORT_EMAIL), jamais celui des administrateurs.
+export function supportEmail(): string {
+  return process.env.SUPPORT_EMAIL || "[Email de contact]";
+}
 
 export function isPlanId(value: unknown): value is PlanId {
   return typeof value === "string" && Object.hasOwn(PLANS, value);

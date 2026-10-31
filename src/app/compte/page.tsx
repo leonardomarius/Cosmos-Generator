@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { PortalButton } from "@/components/PortalButton";
+import { CancelButton } from "@/components/CancelButton";
 import { PLANS } from "@/config/product";
 import { currentUser } from "@/lib/supabase";
 import { getAccount, hasActiveSubscription } from "@/lib/tokens";
@@ -11,13 +11,8 @@ export const metadata: Metadata = { title: "Mon compte" };
 
 const STATUS_LABELS: Record<string, string> = {
   active: "actif",
-  trialing: "actif",
-  past_due: "paiement en attente",
-  unpaid: "impayé",
+  past_due: "dernier prélèvement refusé",
   canceled: "résilié",
-  incomplete: "paiement à finaliser",
-  incomplete_expired: "paiement non abouti",
-  paused: "en pause",
   none: "aucun",
 };
 
@@ -45,8 +40,16 @@ async function AccountDetails({ searchParams }: Pick<PageProps<"/compte">, "sear
     <div className="mt-10 space-y-6">
       {params.abonnement === "ok" && (
         <p className="liquid-glass rounded-[24px] px-5 py-4 text-sm leading-relaxed text-secondary">
-          Merci ! Ton paiement est validé. Tes tokens arrivent dans quelques
-          secondes : recharge la page s&apos;ils ne s&apos;affichent pas encore.
+          Merci ! Dès que Mollie confirme ton paiement, tes tokens arrivent :
+          quelques secondes par carte, quelques jours par prélèvement. Recharge
+          la page s&apos;ils ne s&apos;affichent pas encore.
+        </p>
+      )}
+      {params.abonnement === "changement" && (
+        <p className="liquid-glass rounded-[24px] px-5 py-4 text-sm leading-relaxed text-secondary">
+          Changement de plan enregistré. Une montée de plan est facturée au
+          prorata du mois restant et ses tokens arrivent dès le paiement
+          confirmé ; une baisse s&apos;applique au prochain renouvellement.
         </p>
       )}
 
@@ -61,14 +64,24 @@ async function AccountDetails({ searchParams }: Pick<PageProps<"/compte">, "sear
           <p className="text-secondary">
             {account.cancelAtPeriodEnd
               ? `Se termine le ${renewal}.`
-              : `Prochaine recharge le ${renewal} : ${account.plan ? PLANS[account.plan].monthlyTokens : 0} tokens.`}
+              : account.nextPlan
+                ? `Passe au plan ${PLANS[account.nextPlan].label} le ${renewal} : ${PLANS[account.nextPlan].monthlyTokens} tokens.`
+                : `Prochaine recharge le ${renewal} : ${account.plan ? PLANS[account.plan].monthlyTokens : 0} tokens.`}
           </p>
         )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         {subscribed ? (
-          <PortalButton />
+          <>
+            <Link
+              href="/abonnement"
+              className="liquid-glass liquid-glass--interactive liquid-glass--accent rounded-full px-5 py-3 font-semibold"
+            >
+              {account.cancelAtPeriodEnd ? "Se réabonner" : "Changer de plan"}
+            </Link>
+            {!account.cancelAtPeriodEnd && <CancelButton until={renewal} />}
+          </>
         ) : (
           <Link
             href="/abonnement"

@@ -10,9 +10,11 @@ export type Database = {
       subscriptions: Table<
         {
           user_id: string;
-          stripe_customer_id: string;
-          stripe_subscription_id: string | null;
+          mollie_customer_id: string;
+          mollie_subscription_id: string | null;
+          mollie_mandate_id: string | null;
           plan: string | null;
+          next_plan: string | null;
           status: string;
           current_period_end: string | null;
           cancel_at_period_end: boolean;
@@ -20,9 +22,11 @@ export type Database = {
         },
         {
           user_id: string;
-          stripe_customer_id: string;
-          stripe_subscription_id?: string | null;
+          mollie_customer_id: string;
+          mollie_subscription_id?: string | null;
+          mollie_mandate_id?: string | null;
           plan?: string | null;
+          next_plan?: string | null;
           status?: string;
           current_period_end?: string | null;
           cancel_at_period_end?: boolean;

@@ -9,11 +9,17 @@ export class InsufficientTokensError extends Error {}
 export type Account = {
   balance: number;
   plan: PlanId | null;
-  // Statut Stripe ("active", "past_due", "canceled"…), "none" sans abonnement.
+  // "active", "past_due" (prélèvement échoué), "canceled", "none" sans abonnement.
   status: string;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
+  // Plan choisi en baisse, appliqué au prochain renouvellement.
+  nextPlan: PlanId | null;
 };
+
+// Un prélèvement SEPA met quelques jours à être confirmé : l'accès reste
+// ouvert pendant ce délai après la fin de la période.
+const RENEWAL_GRACE_MS = 5 * 24 * 60 * 60 * 1000;
 
 export async function getAccount(userId: string): Promise<Account> {
   const db = adminClient();
@@ -21,28 +27,39 @@ export async function getAccount(userId: string): Promise<Account> {
     db.from("token_balances").select("balance").eq("user_id", userId).maybeSingle(),
     db
       .from("subscriptions")
-      .select("plan, status, current_period_end, cancel_at_period_end")
+      .select("plan, status, current_period_end, cancel_at_period_end, next_plan")
       .eq("user_id", userId)
       .maybeSingle(),
   ]);
   if (balance.error) throw balance.error;
   if (subscription.error) throw subscription.error;
   const sub = subscription.data;
-  return {
+  const account: Account = {
     balance: balance.data?.balance ?? 0,
     plan: isPlanId(sub?.plan) ? sub.plan : null,
     status: sub?.status ?? "none",
     currentPeriodEnd: sub?.current_period_end ?? null,
     cancelAtPeriodEnd: sub?.cancel_at_period_end ?? false,
+    nextPlan: isPlanId(sub?.next_plan) ? sub.next_plan : null,
   };
+  // Mollie ne prévient pas quand un abonnement arrive à son terme : le solde
+  // est remis à 0 à la première lecture qui suit (une seule fois par période).
+  if (account.balance > 0 && account.currentPeriodEnd && !hasActiveSubscription(account)) {
+    await resetTokens(userId, 0, "expired", `expired:${userId}:${account.currentPeriodEnd}`);
+    account.balance = 0;
+  }
+  return account;
 }
 
-// Abonnement en cours de validité (payé, ou en attente d'un nouvel essai de paiement).
+// Abonnement en cours de validité : période payée pas encore finie (avec un
+// délai de grâce pour le prélèvement suivant, sauf s'il a été résilié).
 export function hasActiveSubscription(account: Account): boolean {
-  return account.status === "active" || account.status === "trialing" || account.status === "past_due";
+  if (!account.currentPeriodEnd || account.status === "none") return false;
+  const end = Date.parse(account.currentPeriodEnd);
+  return Date.now() < (account.status === "canceled" ? end : end + RENEWAL_GRACE_MS);
 }
 
-// reason : "monthly_reset" (facture payée) ou "expired" (abonnement terminé).
+// reason : "monthly_reset" (paiement reçu) ou "expired" (abonnement terminé).
 export async function resetTokens(userId: string, quota: number, reason: "monthly_reset" | "expired", ref: string) {
   const { error } = await adminClient().rpc("reset_tokens", {
     p_user: userId,
@@ -66,6 +83,8 @@ export async function upgradeTokens(userId: string, quota: number, remainingFrac
 
 // Crée la génération et retire ses tokens. Renvoie son identifiant.
 export async function reserveGeneration(userId: string, model: string, tokens: number): Promise<string> {
+  // Remet à 0 le solde d'un abonnement terminé avant de le dépenser.
+  if ((await getAccount(userId)).balance < tokens) throw new InsufficientTokensError();
   const db = adminClient();
   const { data, error } = await db
     .from("generations")

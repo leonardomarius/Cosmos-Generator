@@ -6,7 +6,7 @@ import { PLANS, VIDEO_MODELS } from "../src/config/product.ts";
 // Hypothèses, à ajuster si besoin.
 const EUR_PER_USD = 0.86;
 const VAT = 0.2; // TVA française ; l'OSS applique celle du pays du client dans l'UE.
-const stripeFees = (ttc) => ttc * 0.015 + 0.25 + ttc * 0.007; // carte UE + Stripe Billing
+const paymentFees = (ttc) => ttc * 0.018 + 0.25; // carte UE chez Mollie (tarif standard, à vérifier)
 const FIXED_EUR_PER_MONTH = 20 * EUR_PER_USD + 25 * EUR_PER_USD + 20; // Vercel Pro, Supabase Pro, divers
 const USAGE_RATES = [1, 0.6]; // part du quota réellement utilisée
 
@@ -18,12 +18,12 @@ console.log(`Coût d'une vidéo ${model.label} : ${eur(model.costUsd * EUR_PER_U
 
 const rows = Object.values(PLANS).map((plan) => {
   const ht = plan.priceEur / (1 + VAT);
-  const fees = stripeFees(plan.priceEur);
+  const fees = paymentFees(plan.priceEur);
   const row = {
     Plan: plan.label,
     "Prix TTC": eur(plan.priceEur),
     "Prix HT": eur(ht),
-    "Frais Stripe": eur(fees),
+    "Frais Mollie": eur(fees),
     Vidéos: plan.monthlyTokens / model.tokens,
     "TTC / vidéo": eur(plan.priceEur / (plan.monthlyTokens / model.tokens)),
   };
@@ -37,6 +37,6 @@ console.table(rows);
 
 console.log(`\nFrais fixes estimés : ${eur(FIXED_EUR_PER_MONTH)} / mois`);
 for (const plan of Object.values(PLANS)) {
-  const margin = plan.priceEur / (1 + VAT) - stripeFees(plan.priceEur) - plan.monthlyTokens * costPerTokenEur;
+  const margin = plan.priceEur / (1 + VAT) - paymentFees(plan.priceEur) - plan.monthlyTokens * costPerTokenEur;
   console.log(`  rentable dès ${Math.ceil(FIXED_EUR_PER_MONTH / margin)} abonnés ${plan.label} (quota utilisé à 100 %)`);
 }

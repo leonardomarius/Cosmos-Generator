@@ -1,4 +1,4 @@
-// Adresse du site pour les liens de retour (email de connexion, Stripe) :
+// Adresse du site pour les liens de retour (email de connexion, Mollie) :
 // PUBLIC_BASE_URL en production, sinon l'adresse de la requête (localhost).
 export function siteUrl(request: Request): string {
   return process.env.PUBLIC_BASE_URL?.replace(/\/+$/, "") || new URL(request.url).origin;
