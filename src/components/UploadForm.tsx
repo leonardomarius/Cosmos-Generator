@@ -140,7 +140,7 @@ export function UploadForm() {
                 type="button"
                 onClick={() => removePhoto(i)}
                 aria-label={`Retirer la photo ${i + 1}`}
-                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md"
+                className="absolute right-4 top-4 flex h-8 w-8 items-center pointer-coarse:right-3 pointer-coarse:top-3 pointer-coarse:h-11 pointer-coarse:w-11 justify-center rounded-full bg-black/60 text-white backdrop-blur-md"
               >
                 ×
               </button>

@@ -9,7 +9,7 @@ export function ExampleVideo() {
   const hasVideo = existsSync(file);
 
   return (
-    <div className="liquid-glass w-full max-w-xs rounded-[32px] p-2">
+    <div className="liquid-glass w-full max-w-[min(20rem,calc(85dvh*9/16))] rounded-[32px] p-2">
       <div className="relative aspect-[3/4] overflow-hidden rounded-[24px] bg-black/40">
         {hasVideo ? (
           <video

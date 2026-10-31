@@ -20,7 +20,7 @@ export default function Home() {
     <div className="mx-auto max-w-5xl px-5 pb-20 pt-14 sm:pt-20">
       <section className="flex flex-col items-center gap-14 md:flex-row md:items-center md:justify-between">
         <div className="max-w-lg text-center md:text-left">
-          <h1 className="text-[40px] font-semibold leading-[1.05] sm:text-[56px]">
+          <h1 className="text-display font-semibold">
             {PRODUCT.tagline}
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-secondary sm:text-xl">
