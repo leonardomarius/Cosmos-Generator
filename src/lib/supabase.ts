@@ -5,6 +5,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import type { Database } from "@/lib/database.types";
 
 function env(name: string): string {
@@ -30,7 +31,10 @@ export async function sessionClient() {
 }
 
 // Utilisateur connecté, vérifié auprès de Supabase, ou null.
+// connection() : lu à chaque requête, jamais pendant un pré-rendu (Supabase
+// lit l'heure pour vérifier la session, ce que Next refuse à ce moment-là).
 export async function currentUser(): Promise<User | null> {
+  await connection();
   const supabase = await sessionClient();
   const { data } = await supabase.auth.getUser();
   return data.user;
