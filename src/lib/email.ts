@@ -2,7 +2,7 @@
 // Chaque email porte une clé d'idempotence liée à la tâche fal : si fal renvoie
 // le même webhook, Resend renvoie la réponse du premier envoi sans renvoyer
 // l'email (Resend garde ces clés 24 h, fal arrête ses renvois au bout d'1 h).
-import { PRODUCT } from "@/config/product";
+import { PRODUCT, supportEmail } from "@/config/product";
 
 function escapeHtml(text: string) {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -34,7 +34,15 @@ async function sendEmail(params: {
       "Content-Type": "application/json",
       "Idempotency-Key": params.idempotencyKey,
     },
-    body: JSON.stringify({ from, to: [to], subject, text, html }),
+    // Les réponses du client arrivent sur l'adresse de contact, pas sur EMAIL_FROM.
+    body: JSON.stringify({
+      from,
+      to: [to],
+      ...(process.env.SUPPORT_EMAIL && { reply_to: supportEmail() }),
+      subject,
+      text,
+      html,
+    }),
   });
   // En cas d'échec (y compris un envoi identique encore en cours, 409),
   // l'erreur fait répondre le webhook en 500 : fal le renverra plus tard.
