@@ -2,7 +2,7 @@
 // Chaque email porte une clé d'idempotence liée à la tâche fal : si fal renvoie
 // le même webhook, Resend renvoie la réponse du premier envoi sans renvoyer
 // l'email (Resend garde ces clés 24 h, fal arrête ses renvois au bout d'1 h).
-import { PRODUCT, supportEmail } from "@/config/product";
+import { MODELS, PRODUCT, supportEmail, type ModelId } from "@/config/product";
 
 function escapeHtml(text: string) {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -49,30 +49,50 @@ async function sendEmail(params: {
   if (!res.ok) throw new Error(`Resend a refusé l'email (${res.status}) : ${await res.text()}`);
 }
 
-export function sendVideoReadyEmail(to: string, videoUrl: string, requestId: string) {
+// Les clés d'idempotence gardent le préfixe "video-" des premiers envois.
+export function sendResultReadyEmail(to: string, model: ModelId, url: string, requestId: string) {
+  const image = MODELS[model].kind === "image";
   return sendEmail({
     to,
-    subject: "Ta vidéo est prête",
+    subject: image ? "Ton image est prête" : "Ta vidéo est prête",
     lines: [
       "Bonjour,",
-      "Ta vidéo de star est prête.",
+      model === "kling4" ? "Ta vidéo de star est prête." : image ? "Ton image est prête." : "Ta vidéo est prête.",
       `Elle reste disponible pendant ${PRODUCT.retentionDays} jours : pense à la télécharger.`,
     ],
-    link: { url: videoUrl, label: "Voir et télécharger la vidéo" },
+    link: { url, label: image ? "Voir et télécharger l'image" : "Voir et télécharger la vidéo" },
     idempotencyKey: `video-ready/${requestId}`,
   });
 }
 
-export function sendGenerationFailedEmail(to: string, retryUrl: string, requestId: string) {
+export function sendGenerationFailedEmail(to: string, model: ModelId, retryUrl: string, requestId: string) {
+  const image = MODELS[model].kind === "image";
   return sendEmail({
     to,
-    subject: "Ta vidéo n'a pas pu être créée",
+    subject: image ? "Ton image n'a pas pu être créée" : "Ta vidéo n'a pas pu être créée",
     lines: [
       "Bonjour,",
-      "Désolé : la création de ta vidéo a échoué de notre côté. Tes tokens t'ont été rendus.",
-      "Tu peux relancer une génération, avec d'autres photos si possible (visage net et bien éclairé).",
+      `Désolé : la création de ${image ? "ton image" : "ta vidéo"} a échoué de notre côté. Tes tokens t'ont été rendus.`,
+      model === "kling4"
+        ? "Tu peux relancer une génération, avec d'autres photos si possible (visage net et bien éclairé)."
+        : "Tu peux relancer une génération, en reformulant ta description si besoin.",
     ],
-    link: { url: retryUrl, label: "Relancer une vidéo" },
+    link: { url: retryUrl, label: "Relancer une génération" },
     idempotencyKey: `video-failed/${requestId}`,
+  });
+}
+
+// Vidéo du Père Noël : assemblée en quelques secondes, le lien part aussitôt.
+export function sendSantaVideoEmail(to: string, url: string, generationId: string) {
+  return sendEmail({
+    to,
+    subject: "Ta vidéo du Père Noël est prête",
+    lines: [
+      "Bonjour,",
+      "Ta vidéo du Père Noël est prête.",
+      `Elle reste disponible pendant ${PRODUCT.retentionDays} jours : pense à la télécharger.`,
+    ],
+    link: { url, label: "Voir et télécharger la vidéo" },
+    idempotencyKey: `santa-ready/${generationId}`,
   });
 }

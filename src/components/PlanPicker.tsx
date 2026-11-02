@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { PLANS, VIDEO_MODELS, type PlanId } from "@/config/product";
+import { PLANS, formatTokens, tokensFor, type PlanId } from "@/config/product";
 
-const VIDEO_TOKENS = VIDEO_MODELS.kling4.tokens;
+// Exemples de ce que permet un plan : vidéos par prompt de 10 s, ou images.
+const VIDEO_TOKENS = tokensFor("prompt", 10);
+const IMAGE_TOKENS = tokensFor("image");
 const euros = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 
 export function PlanPicker() {
@@ -40,7 +42,8 @@ export function PlanPicker() {
       <div className="grid gap-4 sm:grid-cols-3">
         {(Object.keys(PLANS) as PlanId[]).map((id) => {
           const plan = PLANS[id];
-          const videos = plan.monthlyTokens / VIDEO_TOKENS;
+          const videos = Math.floor(plan.monthlyTokens / VIDEO_TOKENS);
+          const images = Math.floor(plan.monthlyTokens / IMAGE_TOKENS);
           return (
             <div key={id} className="liquid-glass flex flex-col rounded-[28px] p-6">
               <h2 className="text-xl font-semibold">{plan.label}</h2>
@@ -49,8 +52,8 @@ export function PlanPicker() {
                 <span className="text-base font-normal text-secondary"> / mois</span>
               </p>
               <p className="mt-3 text-secondary">
-                {plan.monthlyTokens} tokens par mois, soit {videos} vidéo{videos > 1 ? "s" : ""}
-                {" "}({euros(plan.priceEur / videos)} la vidéo)
+                {formatTokens(plan.monthlyTokens)} par mois : jusqu&apos;à {videos} vidéo{videos > 1 ? "s" : ""} de 10 s
+                {" "}ou {images} image{images > 1 ? "s" : ""}
               </p>
               <button
                 type="button"

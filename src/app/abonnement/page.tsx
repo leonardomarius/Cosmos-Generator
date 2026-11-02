@@ -9,7 +9,7 @@ export default function PlansPage() {
       <h1 className="text-title font-semibold">Abonnements</h1>
       <p className="mt-3 max-w-2xl text-lg text-secondary">
         Tes tokens sont rechargés chaque mois, à la date de ton abonnement. Les
-        tokens non utilisés ne sont pas reportés. Si une vidéo échoue, ses
+        tokens non utilisés ne sont pas reportés. Si une génération échoue, ses
         tokens te sont rendus. Résiliable à tout moment depuis ton compte.
       </p>
       <PlanPicker />

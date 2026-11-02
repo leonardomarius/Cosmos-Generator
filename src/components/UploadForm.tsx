@@ -1,66 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { GENERATION, UPLOAD_RULES, VIDEO_MODELS, type VideoModelId } from "@/config/product";
-import type { GenerationStatus } from "@/lib/fal";
+import { useState } from "react";
+import { UPLOAD_RULES, formatTokens, tokensFor } from "@/config/product";
+import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
+import { GenerationProgress } from "@/components/GenerationProgress";
+import { useGeneration } from "@/components/useGeneration";
 
 type Photo = { file: File; preview: string };
 
-// Modèle unique de génération.
-const MODEL: VideoModelId = "kling4";
-
-// Vérifications côté navigateur (confort de l'utilisateur).
-// Elles seront refaites côté serveur : on ne fait jamais confiance au navigateur.
-async function checkFile(file: File): Promise<string | null> {
-  if (!(UPLOAD_RULES.acceptedTypes as readonly string[]).includes(file.type)) {
-    return "Format refusé : utilise une photo JPG, PNG ou WebP.";
-  }
-  if (file.size > UPLOAD_RULES.maxSizeBytes) {
-    return "Photo trop lourde : 10 Mo maximum.";
-  }
-  const bitmap = await createImageBitmap(file).catch(() => null);
-  if (!bitmap) return "Impossible de lire cette image.";
-  const tooSmall =
-    Math.min(bitmap.width, bitmap.height) < UPLOAD_RULES.minDimensionPx;
-  bitmap.close();
-  if (tooSmall) {
-    return `Photo trop petite : au moins ${UPLOAD_RULES.minDimensionPx} px de côté.`;
-  }
-  return null;
-}
-
-// Réduit la photo (2048 px max, JPEG) avant l'envoi : assez pour garder les
-// détails du visage sur une photo en pied, et ça reste sous la limite de
-// taille des requêtes des hébergeurs (4,5 Mo sur Vercel), même avec deux photos.
-async function shrinkPhoto(file: File): Promise<Blob> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 2048 / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  return new Promise((resolve, reject) =>
-    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob"))), "image/jpeg", 0.9),
-  );
-}
-
+// Formulaire de la vidéo de référence : la personne des photos remplace la star.
 // email : celui du compte, où la vidéo est envoyée.
 // balance : solde de tokens, relu côté serveur après chaque génération.
 export function UploadForm({ email, balance }: { email: string; balance: number }) {
-  const router = useRouter();
-  const cost = VIDEO_MODELS[MODEL].tokens;
+  const cost = tokensFor("kling4");
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
-  // Adresse à laquelle la vidéo sera envoyée, une fois la génération lancée.
-  const [notifiedEmail, setNotifiedEmail] = useState<string | null>(null);
-  const [starting, setStarting] = useState(false);
-  // Modèle de la génération en cours : c'est lui qu'on interroge pour le suivi.
-  const [job, setJob] = useState<{ requestId: string; model: VideoModelId } | null>(null);
-  const [generation, setGeneration] = useState<GenerationStatus | null>(null);
+  const { start, error, setError, notifiedEmail, starting, generation, busy } = useGeneration(email);
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const input = e.target;
@@ -75,7 +31,7 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
     }
     const added: Photo[] = [];
     for (const file of picked) {
-      const problem = await checkFile(file);
+      const problem = await checkPhoto(file, UPLOAD_RULES.minDimensionPx);
       if (problem) {
         added.forEach((p) => URL.revokeObjectURL(p.preview));
         setError(problem);
@@ -94,53 +50,16 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (photos.length === 0) return;
-    setError(null);
-    setGeneration(null);
-    setNotifiedEmail(null);
-    setStarting(true);
-
+    // Réduites à 2048 px : assez pour garder les détails du visage sur une
+    // photo en pied, et deux photos restent sous la limite de Vercel.
     const body = new FormData();
     for (const [i, photo] of photos.entries()) {
-      body.append("photos", new File([await shrinkPhoto(photo.file)], `photo-${i + 1}.jpg`, { type: "image/jpeg" }));
+      body.append("photos", new File([await shrinkPhoto(photo.file, 2048)], `photo-${i + 1}.jpg`, { type: "image/jpeg" }));
     }
     body.append("consent", String(consent));
-    body.append("model", MODEL);
-    const res = await fetch("/api/generations", { method: "POST", body });
-    const data = await res.json();
-    setStarting(false);
-    // Tokens retirés (ou rendus après un échec) : on relit le solde.
-    router.refresh();
-    if (!res.ok) {
-      setError(data.error);
-      return;
-    }
-    // En local sans PUBLIC_BASE_URL, aucun email ne part : on ne le promet pas.
-    setNotifiedEmail(data.emailNotification ? email : null);
-    setGeneration({ status: "queued", position: null });
-    setJob({ requestId: data.requestId, model: MODEL });
+    await start("kling4", body);
   }
 
-  // Vérifie régulièrement l'avancement jusqu'à la fin de la génération.
-  useEffect(() => {
-    if (!job) return;
-    const timer = setInterval(async () => {
-      const res = await fetch(`/api/generations/${job.requestId}?model=${job.model}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error);
-        return;
-      }
-      setGeneration(data);
-      if (data.status === "done" || data.status === "failed") {
-        clearInterval(timer);
-        setJob(null);
-        router.refresh();
-      }
-    }, GENERATION.pollIntervalMs);
-    return () => clearInterval(timer);
-  }, [job, router]);
-
-  const busy = starting || generation?.status === "queued" || generation?.status === "running";
   const enoughTokens = balance >= cost;
   const canGenerate = photos.length > 0 && consent && enoughTokens && !busy;
   const canAdd = photos.length < UPLOAD_RULES.maxPhotos && !busy;
@@ -207,10 +126,10 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
         disabled={!canGenerate}
         className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-lg font-semibold disabled:opacity-60 disabled:saturate-50"
       >
-        Générer la vidéo · {cost} tokens
+        Générer la vidéo · {formatTokens(cost)}
       </button>
       <p className="text-center text-sm text-secondary">
-        Solde : <strong className="text-white">{balance} tokens</strong>
+        Solde : <strong className="text-white">{formatTokens(balance)}</strong>
         {!enoughTokens && (
           <>
             {" "}· pas assez pour une vidéo.{" "}
@@ -219,36 +138,8 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
         )}
       </p>
 
-      {starting && (
-        <p className="text-center text-sm text-secondary">
-          Envoi des photos…
-        </p>
-      )}
-      {notifiedEmail && (generation?.status === "queued" || generation?.status === "running") && (
-        <p className="liquid-glass rounded-[24px] px-5 py-4 text-center text-sm leading-relaxed text-secondary">
-          C&apos;est lancé ! Tu peux fermer cette page : la vidéo sera envoyée à{" "}
-          <strong className="text-white">{notifiedEmail}</strong> dès qu&apos;elle sera prête.
-        </p>
-      )}
-      {generation?.status === "queued" && (
-        <p className="text-center text-sm text-secondary">
-          Vidéo en file d&apos;attente
-          {generation.position !== null && ` (position ${generation.position + 1})`}…
-        </p>
-      )}
-      {generation?.status === "running" && (
-        <p className="text-center text-sm text-secondary">
-          Génération de la vidéo en cours, compte quelques minutes…
-        </p>
-      )}
-      {generation?.status === "failed" && (
-        <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          La génération a échoué : {generation.error}
-        </p>
-      )}
-      {generation?.status === "done" && (
-        <video src={generation.videoUrl} controls autoPlay loop className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-[28px] shadow-2xl shadow-black/50" />
-      )}
+      {starting && <p className="text-center text-sm text-secondary">Envoi des photos…</p>}
+      <GenerationProgress kind="video" generation={generation} notifiedEmail={notifiedEmail} />
     </form>
   );
 }

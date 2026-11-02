@@ -1,6 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ExampleVideo } from "@/components/ExampleVideo";
-import { PRODUCT } from "@/config/product";
+import { PromptStudio } from "@/components/PromptStudio";
+import { EFFECTS } from "@/config/effects";
+import { PRODUCT, formatTokens, tokensFor } from "@/config/product";
+import { currentUser } from "@/lib/supabase";
+import { getAccount } from "@/lib/tokens";
 
 const STEPS = [
   { title: "1. Les photos", text: "Envoie 1 ou 2 photos nettes du proche à faire apparaître." },
@@ -18,47 +23,86 @@ const STEP_ICONS = [
 export default function Home() {
   return (
     <div className="mx-auto max-w-5xl px-5 pb-20 pt-14 sm:pt-20">
-      <section className="flex flex-col items-center gap-14 md:flex-row md:items-center md:justify-between">
-        <div className="max-w-lg text-center md:text-left">
-          <h1 className="text-display font-semibold">
-            {PRODUCT.tagline}
-          </h1>
-          <p className="mt-6 text-lg leading-relaxed text-secondary sm:text-xl">
-            Une vidéo de {PRODUCT.videoDurationSeconds} secondes où ton proche
-            enchaîne les figures. 1 ou 2 photos suffisent, aucun texte à écrire.
-          </p>
-          <div className="mt-10 flex flex-col items-center gap-4 md:items-start">
-            <Link
-              href="/creer"
-              className="liquid-glass liquid-glass--interactive liquid-glass--accent rounded-full px-8 py-4 text-lg font-semibold"
-            >
-              Créer ma vidéo
-            </Link>
-            <p className="text-xs text-tertiary">
-              Phase de test · Vidéo disponible {PRODUCT.retentionDays} jours ·
-              Photos supprimées sous {PRODUCT.retentionDays} jours
-            </p>
-          </div>
+      <section className="mx-auto max-w-3xl">
+        <h1 className="text-center text-display font-semibold">Imagine-le, on le génère</h1>
+        <p className="mt-6 text-center text-lg leading-relaxed text-secondary sm:text-xl">
+          Une image ou une vidéo à partir de quelques mots, avec tes propres
+          images si tu veux.
+        </p>
+        <div className="mt-10">
+          <Suspense fallback={<div className="liquid-glass min-h-80 rounded-[32px]" aria-busy="true" />}>
+            <StudioGate />
+          </Suspense>
         </div>
-        <ExampleVideo />
       </section>
 
-      <section className="mt-24 grid gap-5 sm:grid-cols-3">
-        {STEPS.map((step, i) => (
-          <div
-            key={step.title}
-            className="liquid-glass liquid-glass--interactive cursor-default rounded-[28px] p-6"
-          >
-            <span className="glass-icon mb-5" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {STEP_ICONS[i]}
-              </svg>
-            </span>
-            <h2 className="text-[17px] font-semibold">{step.title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-secondary">{step.text}</p>
+      <section className="mt-28">
+        <h2 className="text-center text-title font-semibold md:text-left">Effets de saison</h2>
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          {EFFECTS.map((effect) => (
+            <Link
+              key={effect.slug}
+              href={`/effets/${effect.slug}`}
+              className="liquid-glass liquid-glass--interactive block rounded-[28px] p-6"
+            >
+              <h3 className="text-xl font-semibold">{effect.title}</h3>
+              <p className="mt-2 leading-relaxed text-secondary">{effect.subtitle}</p>
+              <p className="mt-5 text-sm font-semibold">Créer · {formatTokens(effect.tokens)}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-28">
+        <h2 className="text-center text-title font-semibold md:text-left">Vidéos de référence</h2>
+        <div className="mt-10 flex flex-col items-center gap-14 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-lg text-center md:text-left">
+            <p className="text-2xl font-semibold">{PRODUCT.tagline}</p>
+            <p className="mt-6 text-lg leading-relaxed text-secondary sm:text-xl">
+              Une vidéo de {PRODUCT.videoDurationSeconds} secondes où ton proche
+              devient la star. 1 ou 2 photos suffisent, aucun texte à écrire.
+            </p>
+            <div className="mt-10 flex flex-col items-center gap-4 md:items-start">
+              <Link
+                href="/creer"
+                className="liquid-glass liquid-glass--interactive liquid-glass--accent rounded-full px-8 py-4 text-lg font-semibold"
+              >
+                Utiliser cette vidéo · {formatTokens(tokensFor("kling4"))}
+              </Link>
+              <p className="text-xs text-tertiary">
+                Vidéo disponible {PRODUCT.retentionDays} jours · Photos
+                supprimées sous {PRODUCT.retentionDays} jours
+              </p>
+            </div>
           </div>
-        ))}
+          <ExampleVideo />
+        </div>
+
+        <div className="mt-16 grid gap-5 sm:grid-cols-3">
+          {STEPS.map((step, i) => (
+            <div
+              key={step.title}
+              className="liquid-glass liquid-glass--interactive cursor-default rounded-[28px] p-6"
+            >
+              <span className="glass-icon mb-5" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  {STEP_ICONS[i]}
+                </svg>
+              </span>
+              <h3 className="text-[17px] font-semibold">{step.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-secondary">{step.text}</p>
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   );
+}
+
+// Le générateur connaît le compte : non connecté, il propose de se connecter.
+async function StudioGate() {
+  const user = await currentUser();
+  if (!user?.email) return <PromptStudio email={null} balance={0} />;
+  const account = await getAccount(user.id);
+  return <PromptStudio email={user.email} balance={account.balance} />;
 }

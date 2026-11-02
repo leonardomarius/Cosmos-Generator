@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { CancelButton } from "@/components/CancelButton";
-import { PLANS } from "@/config/product";
+import { PLANS, formatTokens } from "@/config/product";
 import { currentUser } from "@/lib/supabase";
 import { getAccount, hasActiveSubscription } from "@/lib/tokens";
 
@@ -55,7 +55,7 @@ async function AccountDetails({ searchParams }: Pick<PageProps<"/compte">, "sear
 
       <div className="liquid-glass space-y-2 rounded-[28px] p-6">
         <p className="text-sm text-secondary">{user.email}</p>
-        <p className="text-4xl font-semibold">{account.balance} tokens</p>
+        <p className="text-4xl font-semibold">{formatTokens(account.balance)}</p>
         <p className="text-secondary">
           {account.plan ? `Plan ${PLANS[account.plan].label}` : "Aucun plan"} · abonnement{" "}
           {STATUS_LABELS[account.status] ?? account.status}
@@ -65,8 +65,8 @@ async function AccountDetails({ searchParams }: Pick<PageProps<"/compte">, "sear
             {account.cancelAtPeriodEnd
               ? `Se termine le ${renewal}.`
               : account.nextPlan
-                ? `Passe au plan ${PLANS[account.nextPlan].label} le ${renewal} : ${PLANS[account.nextPlan].monthlyTokens} tokens.`
-                : `Prochaine recharge le ${renewal} : ${account.plan ? PLANS[account.plan].monthlyTokens : 0} tokens.`}
+                ? `Passe au plan ${PLANS[account.nextPlan].label} le ${renewal} : ${formatTokens(PLANS[account.nextPlan].monthlyTokens)}.`
+                : `Prochaine recharge le ${renewal} : ${formatTokens(account.plan ? PLANS[account.plan].monthlyTokens : 0)}.`}
           </p>
         )}
       </div>

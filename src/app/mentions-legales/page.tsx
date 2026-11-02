@@ -15,7 +15,7 @@ export default function LegalNoticePage() {
       <p>Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis.</p>
       <h2>Intelligence artificielle</h2>
       <p>
-        Les vidéos produites sur ce site sont générées par intelligence
+        Les images et vidéos produites sur ce site sont générées par intelligence
         artificielle et portent la mention « Généré par IA ».
       </p>
     </LegalPage>

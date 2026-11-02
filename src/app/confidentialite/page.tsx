@@ -14,18 +14,18 @@ export default function PrivacyPage() {
       </p>
       <h2>Finalité</h2>
       <p>
-        Générer et livrer la vidéo commandée, gérer le paiement et les
+        Générer et livrer les images et vidéos commandées, gérer le paiement et les
         éventuels remboursements.
       </p>
       <h2>Durée de conservation</h2>
       <p>
-        Les photos et vidéos sont supprimées automatiquement sous{" "}
+        Les photos, images et vidéos sont supprimées automatiquement sous{" "}
         {PRODUCT.retentionDays} jours. Les données de facturation sont
         conservées selon les obligations légales.
       </p>
       <h2>Sous-traitants</h2>
       <p>
-        Supabase (données), Mollie (paiement), fal.ai (génération vidéo),
+        Supabase (données), Mollie (paiement), fal.ai (génération d&apos;images et de vidéos),
         service de modération d&apos;images, Vercel (hébergement), service
         d&apos;envoi d&apos;emails.
       </p>

@@ -1,5 +1,5 @@
-import { isVideoModelId } from "@/config/product";
-import { sendGenerationFailedEmail, sendVideoReadyEmail } from "@/lib/email";
+import { isModelId } from "@/config/product";
+import { sendGenerationFailedEmail, sendResultReadyEmail } from "@/lib/email";
 import { FAL_REQUEST_ID, getFinishedGeneration, publicBaseUrl } from "@/lib/fal";
 import { isValidFalWebhook } from "@/lib/fal-webhook";
 import { readNotificationToken } from "@/lib/notification-token";
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   } catch {
     requestId = null;
   }
-  if (!email || !isVideoModelId(model) || typeof requestId !== "string" || !FAL_REQUEST_ID.test(requestId)) {
+  if (!email || !isModelId(model) || typeof requestId !== "string" || !FAL_REQUEST_ID.test(requestId)) {
     // Signé par fal mais inexploitable : inutile que fal le renvoie.
     console.error("Webhook fal ignoré : jeton, modèle ou request_id invalide");
     return Response.json({ ignored: true });
@@ -43,10 +43,12 @@ export async function POST(request: Request) {
     }
     await settleGeneration({ falRequestId: requestId }, result.status);
     if (result.status === "done") {
-      await sendVideoReadyEmail(email, result.videoUrl, requestId);
+      await sendResultReadyEmail(email, model, result.url, requestId);
     } else {
       console.error(`Génération ${requestId} échouée : ${result.error}`);
-      await sendGenerationFailedEmail(email, `${publicBaseUrl()}/creer`, requestId);
+      // La vidéo de référence se relance depuis /creer, le reste depuis l'accueil.
+      const retryPath = model === "kling4" ? "/creer" : "/";
+      await sendGenerationFailedEmail(email, model, `${publicBaseUrl()}${retryPath}`, requestId);
     }
     return Response.json({ sent: true });
   } catch (err) {
