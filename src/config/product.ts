@@ -13,7 +13,7 @@ export const PRODUCT = {
 
 // Quatre services, chacun en un seul appel à fal.ai (les effets saisonniers,
 // sans IA à chaque commande, sont dans src/config/effects.ts) :
-// - image : prompt du client, avec ou sans images (Nano Banana Pro) ;
+// - image : prompt du client, avec ou sans images (Nano Banana 2.1) ;
 // - prompt : vidéo à partir du prompt seul (Kling 4.0) ;
 // - promptImages : vidéo à partir du prompt et d'images (Kling 4.0) ;
 // - kling4 : vidéo de référence, où la star est remplacée par la personne
@@ -61,10 +61,14 @@ export const MODELS = {
   image: {
     label: "Image",
     kind: "image",
-    falModel: "fal-ai/nano-banana-pro",
+    falModel: "fal-ai/nano-banana-2.1",
     // Même modèle quand le client ajoute des images.
-    falEditModel: "fal-ai/nano-banana-pro/edit",
-    usdPerImage: 0.15,
+    falEditModel: "fal-ai/nano-banana-2.1/edit",
+    // fal n'affiche pas son prix : 0,0336 $ chez Google en 1K, plus la marge
+    // habituelle de fal. À confirmer sur la première facture.
+    usdPerImage: 0.04,
+    // Prix fixé au-dessus de la règle (20 tokens).
+    tokens: 25,
   },
   prompt: {
     label: "Vidéo",
@@ -124,9 +128,12 @@ export function costUsd(model: ModelId, seconds?: VideoDuration): number {
   return spec.usdPerSecond * duration;
 }
 
-// Prix pour le client, en tokens (le petit epsilon évite qu'une erreur
-// d'arrondi des flottants ajoute 5 tokens).
+// Prix pour le client, en tokens : fixé dans MODELS s'il y est, sinon déduit
+// du coût fal (le petit epsilon évite qu'une erreur d'arrondi des flottants
+// ajoute 5 tokens).
 export function tokensFor(model: ModelId, seconds?: VideoDuration): number {
+  const spec = MODELS[model];
+  if ("tokens" in spec) return spec.tokens;
   const steps = Math.ceil(costUsd(model, seconds) / (TOKEN_USD * PRICE_STEP_TOKENS) - 1e-9);
   return Math.max(1, steps) * PRICE_STEP_TOKENS;
 }
