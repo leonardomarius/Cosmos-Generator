@@ -29,11 +29,11 @@ export function CancelButton({ until }: { until: string | null }) {
         type="button"
         onClick={cancel}
         disabled={pending}
-        className="liquid-glass liquid-glass--interactive rounded-full px-5 py-3 font-semibold disabled:opacity-60"
+        className="liquid-glass liquid-glass--interactive w-full rounded-full px-5 py-3 font-semibold disabled:opacity-60 sm:w-auto"
       >
         {pending ? "Résiliation…" : "Résilier"}
       </button>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p className="text-base text-red-700 sm:text-sm">{error}</p>}
     </>
   );
 }
