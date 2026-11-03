@@ -125,7 +125,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
                 type="button"
                 onClick={() => removePhoto(i)}
                 aria-label={`Retirer l'image ${i + 1}`}
-                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-md before:absolute before:-inset-2"
+                className="absolute -right-2 -top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-md before:absolute before:-inset-2"
               >
                 ×
               </button>
