@@ -216,9 +216,9 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
         disabled={!canGenerate}
         className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full px-4 py-4 text-base font-semibold disabled:opacity-60 disabled:saturate-50 sm:text-lg"
       >
-        {/* Sous 375 px, le prix passe sous le libellé au lieu d'une coupure au hasard. */}
-        Créer la vidéo du Père Noël<span className="max-xs:hidden"> · </span>
-        <span className="max-xs:block max-xs:text-sm max-xs:font-medium max-xs:opacity-85">{formatTokens(cost)}</span>
+        {/* Sur mobile, le prix passe sous le libellé au lieu d'une coupure au hasard. */}
+        Créer la vidéo du Père Noël<span className="max-sm:hidden"> · </span>
+        <span className="max-sm:block max-sm:text-sm max-sm:font-medium max-sm:opacity-85">{formatTokens(cost)}</span>
       </button>
       <p className="text-center text-sm text-secondary">
         Solde : <strong className="text-foreground">{formatTokens(balance)}</strong>
