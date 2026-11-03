@@ -60,6 +60,8 @@ export function LiquidGlassDefs() {
     if (!("userAgentData" in navigator)) return;
     const svg = svgRef.current!;
     const style = styleRef.current!;
+    // Sous 768 px, la réfraction ne s'applique pas : rien à calculer.
+    const wide = matchMedia("(min-width: 768px)");
 
     let frame = 0;
     const build = () => {
@@ -67,18 +69,20 @@ export function LiquidGlassDefs() {
       frame = requestAnimationFrame(() => {
         const filters: string[] = [];
         const rules: string[] = [];
-        document.querySelectorAll<HTMLElement>(".liquid-glass").forEach((el, i) => {
-          const w = el.offsetWidth;
-          const h = el.offsetHeight;
-          if (!w || !h) return;
-          const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
-          const id = `liquid-glass-${i}`;
-          filters.push(filterMarkup(id, w, h, Math.min(radius, w / 2, h / 2)));
-          rules.push(
-            `${selectorFor(el)}{backdrop-filter:blur(var(--glass-blur)) url(#${id}) saturate(var(--glass-sat))}`,
-          );
-          resizes.observe(el);
-        });
+        if (wide.matches) {
+          document.querySelectorAll<HTMLElement>(".liquid-glass").forEach((el, i) => {
+            const w = el.offsetWidth;
+            const h = el.offsetHeight;
+            if (!w || !h) return;
+            const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+            const id = `liquid-glass-${i}`;
+            filters.push(filterMarkup(id, w, h, Math.min(radius, w / 2, h / 2)));
+            rules.push(
+              `${selectorFor(el)}{backdrop-filter:blur(var(--glass-blur)) url(#${id}) saturate(var(--glass-sat))}`,
+            );
+            resizes.observe(el);
+          });
+        }
         svg.innerHTML = filters.join("");
         // Réfraction réservée aux écrans assez larges, pour la performance.
         style.textContent = `@media (min-width: 768px){${rules.join("")}}`;
@@ -90,12 +94,14 @@ export function LiquidGlassDefs() {
       if (records.some((r) => !svg.contains(r.target) && !style.contains(r.target) && r.target !== style)) build();
     });
     mutations.observe(document.body, { childList: true, subtree: true });
+    wide.addEventListener("change", build);
     build();
 
     return () => {
       cancelAnimationFrame(frame);
       resizes.disconnect();
       mutations.disconnect();
+      wide.removeEventListener("change", build);
     };
   }, []);
 
