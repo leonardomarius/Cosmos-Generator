@@ -39,7 +39,7 @@ export function PlanPicker() {
 
   return (
     <div className="mt-10 space-y-6">
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         {(Object.keys(PLANS) as PlanId[]).map((id) => {
           const plan = PLANS[id];
           const videos = Math.floor(plan.monthlyTokens / VIDEO_TOKENS);
@@ -68,7 +68,7 @@ export function PlanPicker() {
         })}
       </div>
 
-      <label className="liquid-glass flex items-start gap-3 rounded-[24px] p-5 text-sm leading-relaxed text-secondary">
+      <label className="liquid-glass flex items-start gap-3 rounded-[24px] p-5 text-base leading-relaxed text-secondary sm:text-sm">
         <input
           type="checkbox"
           checked={waiver}
@@ -82,7 +82,7 @@ export function PlanPicker() {
       </label>
 
       {error && (
-        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
+        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-base text-red-700 sm:text-sm">{error}</p>
       )}
     </div>
   );
