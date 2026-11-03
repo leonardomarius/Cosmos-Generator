@@ -121,7 +121,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
                 type="button"
                 onClick={removePhoto}
                 aria-label="Retirer la photo"
-                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md pointer-coarse:right-3 pointer-coarse:top-3 pointer-coarse:h-11 pointer-coarse:w-11"
+                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md before:absolute before:-inset-2"
               >
                 ×
               </button>
@@ -130,7 +130,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
         ) : (
           <label className="liquid-glass liquid-glass--interactive flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-[28px] p-6 text-center focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70">
             <span className="font-semibold">Ajouter une photo</span>
-            <span className="text-sm text-secondary">
+            <span className="text-base text-secondary sm:text-sm">
               Visage de face, net et bien éclairé, l&apos;enfant seul sur la photo.
               Elle apparaîtra telle quelle dans le cadre magique du Père Noël.
             </span>
@@ -194,10 +194,10 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
       </p>
 
       {error && (
-        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
+        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-base text-red-700 sm:text-sm">{error}</p>
       )}
 
-      <label className="liquid-glass flex items-start gap-3 rounded-[24px] p-5 text-sm leading-relaxed text-secondary">
+      <label className="liquid-glass flex items-start gap-3 rounded-[24px] p-5 text-base leading-relaxed text-secondary sm:text-sm">
         <input
           type="checkbox"
           checked={consent}
@@ -214,9 +214,11 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
       <button
         type="submit"
         disabled={!canGenerate}
-        className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-lg font-semibold disabled:opacity-60 disabled:saturate-50"
+        className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full px-4 py-4 text-base font-semibold disabled:opacity-60 disabled:saturate-50 sm:text-lg"
       >
-        Créer la vidéo du Père Noël · {formatTokens(cost)}
+        {/* Sous 375 px, le prix passe sous le libellé au lieu d'une coupure au hasard. */}
+        Créer la vidéo du Père Noël<span className="max-xs:hidden"> · </span>
+        <span className="max-xs:block max-xs:text-sm max-xs:font-medium max-xs:opacity-85">{formatTokens(cost)}</span>
       </button>
       <p className="text-center text-sm text-secondary">
         Solde : <strong className="text-foreground">{formatTokens(balance)}</strong>
@@ -229,14 +231,14 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
       </p>
 
       {busy && (
-        <p className="text-center text-sm text-secondary">
+        <p className="text-center text-base text-secondary sm:text-sm">
           Le Père Noël prépare ta vidéo… quelques secondes, ne ferme pas la page.
         </p>
       )}
       {result && (
         <div className="space-y-3">
           {result.emailed && (
-            <p className="text-center text-sm text-secondary">
+            <p className="text-center text-base text-secondary sm:text-sm">
               Elle t&apos;a aussi été envoyée à <strong className="text-foreground">{email}</strong>.
             </p>
           )}
