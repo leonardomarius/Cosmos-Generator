@@ -133,7 +133,8 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
           </div>
         ))}
         {photos.length < PROMPT_RULES.maxImages && !busy && (
-          <label className="liquid-glass liquid-glass--interactive flex h-20 min-w-20 flex-1 cursor-pointer items-center justify-center rounded-2xl px-4 text-center text-sm text-secondary focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70 sm:flex-none">
+          // Sans image, pleine largeur sur mobile ; ensuite, une tuile comme les vignettes.
+          <label className={`liquid-glass liquid-glass--interactive flex h-20 min-w-20 cursor-pointer items-center justify-center rounded-2xl px-4 text-center text-sm text-secondary focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70 ${photos.length === 0 ? "flex-1 sm:flex-none" : ""}`}>
             {photos.length === 0 ? "+ Ajouter des images (facultatif)" : "+ Image"}
             <input
               type="file"
