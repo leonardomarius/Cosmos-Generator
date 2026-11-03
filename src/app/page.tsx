@@ -36,7 +36,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-28">
+      <section className="mt-section">
         <h2 className="text-center text-title font-semibold md:text-left">Effets de saison</h2>
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
           {EFFECTS.map((effect) => (
@@ -53,7 +53,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mt-28">
+      <section className="mt-section">
         <h2 className="text-center text-title font-semibold md:text-left">Vidéos de référence</h2>
         <div className="mt-10 flex flex-col items-center gap-14 md:flex-row md:items-center md:justify-between">
           <div className="max-w-lg text-center md:text-left">
@@ -65,7 +65,7 @@ export default function Home() {
             <div className="mt-10 flex flex-col items-center gap-4 md:items-start">
               <Link
                 href="/creer"
-                className="liquid-glass liquid-glass--interactive liquid-glass--accent rounded-full px-8 py-4 text-lg font-semibold"
+                className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full text-balance rounded-full px-4 py-4 text-base font-semibold sm:w-auto sm:px-8 sm:text-lg"
               >
                 Utiliser cette vidéo · {formatTokens(tokensFor("kling4"))}
               </Link>
@@ -78,7 +78,7 @@ export default function Home() {
           <ExampleVideo />
         </div>
 
-        <div className="mt-16 grid gap-5 sm:grid-cols-3">
+        <div className="mt-16 grid gap-5 md:grid-cols-3">
           {STEPS.map((step, i) => (
             <div
               key={step.title}
@@ -90,7 +90,7 @@ export default function Home() {
                 </svg>
               </span>
               <h3 className="text-[17px] font-semibold">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-secondary">{step.text}</p>
+              <p className="mt-2 text-base leading-relaxed text-secondary sm:text-sm">{step.text}</p>
             </div>
           ))}
         </div>
