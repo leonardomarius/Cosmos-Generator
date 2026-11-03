@@ -2,18 +2,24 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { PRODUCT } from "@/config/product";
 
-// Affiche la vidéo d'exemple si public/exemple.mp4 existe,
-// sinon un emplacement réservé.
+// Copie légère de la vidéo et son affiche (scripts/prepare-web-video.mjs).
+const WEB_VIDEO = "/exemple-web.mp4";
+const WEB_POSTER = "/exemple-web.jpg";
+
+// Affiche la vidéo d'exemple si public/exemple.mp4 existe (sa copie légère
+// quand elle est prête), sinon un emplacement réservé.
 export function ExampleVideo() {
-  const file = path.join(process.cwd(), "public", PRODUCT.referenceVideoPath);
-  const hasVideo = existsSync(file);
+  const inPublic = (file: string) => existsSync(path.join(process.cwd(), "public", file));
+  const hasVideo = inPublic(PRODUCT.referenceVideoPath);
+  const light = hasVideo && inPublic(WEB_VIDEO);
 
   return (
     <div className="liquid-glass w-full max-w-[min(20rem,calc(85dvh*9/16))] rounded-[32px] p-2">
       <div className="relative aspect-[9/16] overflow-hidden rounded-[24px] bg-foreground/8">
         {hasVideo ? (
           <video
-            src={PRODUCT.referenceVideoPath}
+            src={light ? WEB_VIDEO : PRODUCT.referenceVideoPath}
+            poster={light && inPublic(WEB_POSTER) ? WEB_POSTER : undefined}
             autoPlay
             muted
             loop
@@ -27,7 +33,7 @@ export function ExampleVideo() {
             (dépose un fichier public/exemple.mp4)
           </div>
         )}
-        <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-medium text-white/85 backdrop-blur-md">
+        <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">
           Généré par IA
         </span>
       </div>

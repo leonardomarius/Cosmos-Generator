@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node --env-file-if-exists=.env.local scripts/prepare-video.mjs",
+    "predev": "node --env-file-if-exists=.env.local scripts/prepare-video.mjs && node scripts/prepare-web-video.mjs",
     "dev": "next dev",
-    "prebuild": "node --env-file-if-exists=.env.local scripts/prepare-video.mjs",
+    "prebuild": "node --env-file-if-exists=.env.local scripts/prepare-video.mjs && node scripts/prepare-web-video.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
