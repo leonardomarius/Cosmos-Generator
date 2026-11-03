@@ -86,7 +86,8 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
 
   return (
     <form className="liquid-glass glass-card--clear space-y-5 rounded-[32px] p-4 sm:p-6" onSubmit={onSubmit}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Mobile : le coût s'aligne sur le libellé « Type », au-dessus des boutons. */}
+      <div className="relative sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
         <Choices
           label="Type"
           options={(["video", "image"] as const).map((k) => ({ value: k, label: k === "video" ? "Vidéo" : "Image" }))}
@@ -94,7 +95,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
           onChange={setKind}
           disabled={busy}
         />
-        <span className="text-sm text-secondary">{formatTokens(cost)}</span>
+        <span className="absolute right-0 top-0 text-sm text-secondary sm:static">{formatTokens(cost)}</span>
       </div>
 
       <label className="block">
@@ -124,7 +125,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
                 type="button"
                 onClick={() => removePhoto(i)}
                 aria-label={`Retirer l'image ${i + 1}`}
-                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-md pointer-coarse:h-11 pointer-coarse:w-11"
+                className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-md before:absolute before:-inset-2"
               >
                 ×
               </button>
@@ -132,7 +133,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
           </div>
         ))}
         {photos.length < PROMPT_RULES.maxImages && !busy && (
-          <label className="liquid-glass liquid-glass--interactive flex h-20 min-w-20 cursor-pointer items-center justify-center rounded-2xl px-4 text-center text-sm text-secondary focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70">
+          <label className="liquid-glass liquid-glass--interactive flex h-20 min-w-20 flex-1 cursor-pointer items-center justify-center rounded-2xl px-4 text-center text-sm text-secondary focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70 sm:flex-none">
             {photos.length === 0 ? "+ Ajouter des images (facultatif)" : "+ Image"}
             <input
               type="file"
@@ -145,7 +146,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
         )}
       </div>
 
-      <div className="flex flex-wrap gap-x-6 gap-y-3">
+      <div className="grid gap-4 sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-3">
         {kind === "video" && (
           <Choices
             label="Durée"
@@ -165,7 +166,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
       </div>
 
       {needsConsent && (
-        <label className="flex items-start gap-3 text-sm leading-relaxed text-secondary">
+        <label className="flex items-start gap-3 text-base leading-relaxed text-secondary sm:text-sm">
           <input
             type="checkbox"
             checked={consent}
@@ -181,13 +182,13 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
       )}
 
       {error && (
-        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
+        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-base text-red-700 sm:text-sm">{error}</p>
       )}
 
       {email === null ? (
         <Link
           href="/connexion?next=/"
-          className="liquid-glass liquid-glass--interactive liquid-glass--accent block w-full rounded-full py-4 text-center text-lg font-semibold"
+          className="liquid-glass liquid-glass--interactive liquid-glass--accent block w-full rounded-full py-4 text-center text-base font-semibold sm:text-lg"
         >
           Se connecter pour générer
         </Link>
@@ -196,7 +197,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
           <button
             type="submit"
             disabled={!canGenerate}
-            className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-lg font-semibold disabled:opacity-60 disabled:saturate-50"
+            className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-base font-semibold disabled:opacity-60 disabled:saturate-50 sm:text-lg"
           >
             Générer {kind === "video" ? "la vidéo" : "l'image"} · {formatTokens(cost)}
           </button>
@@ -212,13 +213,14 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
         </>
       )}
 
-      {starting && <p className="text-center text-sm text-secondary">Envoi…</p>}
+      {starting && <p className="text-center text-base text-secondary sm:text-sm">Envoi…</p>}
       <GenerationProgress kind={kind} generation={generation} notifiedEmail={notifiedEmail} />
     </form>
   );
 }
 
-// Groupe de boutons à choix unique (type, durée, format).
+// Groupe de boutons à choix unique (type, durée, format). Mobile : libellé
+// au-dessus, boutons qui se partagent la rangée ; dès 640 px, sur une ligne.
 function Choices<T extends string | number>({
   label,
   options,
@@ -233,20 +235,22 @@ function Choices<T extends string | number>({
   disabled: boolean;
 }) {
   return (
-    <div role="group" aria-label={label} className="flex flex-wrap items-center gap-2">
+    <div role="group" aria-label={label} className="grid gap-2 sm:flex sm:items-center">
       <span className="text-sm text-tertiary">{label}</span>
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          aria-pressed={option.value === value}
-          onClick={() => onChange(option.value)}
-          disabled={disabled}
-          className={`liquid-glass liquid-glass--interactive min-h-9 rounded-full px-4 text-sm font-medium pointer-coarse:min-h-11 ${option.value === value ? "liquid-glass--accent" : "text-secondary"}`}
-        >
-          {option.label}
-        </button>
-      ))}
+      <div className="flex gap-2">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={option.value === value}
+            onClick={() => onChange(option.value)}
+            disabled={disabled}
+            className={`liquid-glass liquid-glass--interactive min-h-9 flex-1 rounded-full px-2 text-sm font-medium sm:flex-none sm:px-4 pointer-coarse:min-h-11 ${option.value === value ? "liquid-glass--accent" : "text-secondary"}`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
