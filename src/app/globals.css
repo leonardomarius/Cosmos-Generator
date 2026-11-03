@@ -24,12 +24,16 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
     var(--font-inter), system-ui, "Segoe UI", sans-serif;
   --font-mono: var(--font-geist-mono);
-  /* Titres fluides : de 320 px à ~1000 px, puis taille desktop fixe.
-     Points de rupture : ceux de Tailwind (sm 640, md 768, lg 1024, xl 1280, 2xl 1536). */
+  /* Points de rupture : ceux de Tailwind (sm 640, md 768, lg 1024, xl 1280,
+     2xl 1536), plus xs 375 pour les téléphones étroits (320 à 374 px). */
+  --breakpoint-xs: 23.4375rem;
+  /* Titres fluides : de 320 px à ~1000 px, puis taille desktop fixe. */
   --text-display: clamp(2.25rem, 1.6rem + 3.2vw, 3.5rem);
   --text-display--line-height: 1.05;
   --text-title: clamp(1.875rem, 1.5rem + 1.5vw, 2.25rem);
   --text-title--line-height: 1.15;
+  /* Espace entre les grandes sections : 72 px à 320 px, 112 px dès 1024 px. */
+  --spacing-section: clamp(4.5rem, 3.36rem + 5.68vw, 7rem);
 }
 
 body {
@@ -38,6 +42,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
+  /* Un mot sans espace (email, lien) trop long passe à la ligne au lieu de
+     déborder. */
+  overflow-wrap: break-word;
 }
 
 h1,
@@ -255,12 +262,15 @@ h3 {
   .liquid-glass--interactive {
     cursor: pointer;
   }
-  .liquid-glass--interactive:hover {
-    transform: translateY(-2px);
-  }
-  .liquid-glass--interactive:hover::after {
-    transform: translate3d(8%, 6%, 0);
-    opacity: 1;
+  /* Souris seulement : au toucher, le survol resterait collé après un tap. */
+  @media (hover: hover) {
+    .liquid-glass--interactive:hover {
+      transform: translateY(-2px);
+    }
+    .liquid-glass--interactive:hover::after {
+      transform: translate3d(8%, 6%, 0);
+      opacity: 1;
+    }
   }
   .liquid-glass--interactive:active {
     transform: scale(0.98);
