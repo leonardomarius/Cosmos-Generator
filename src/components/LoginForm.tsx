@@ -51,7 +51,7 @@ export function LoginForm() {
         <input type="hidden" name="next" value={next} />
         <button
           type="submit"
-          className="liquid-glass liquid-glass--interactive flex w-full items-center justify-center gap-3 rounded-full py-4 text-lg font-semibold"
+          className="liquid-glass liquid-glass--interactive flex w-full items-center justify-center gap-3 rounded-full py-4 text-base font-semibold sm:text-lg"
         >
           <GoogleIcon />
           Continuer avec Google
@@ -75,12 +75,12 @@ export function LoginForm() {
           />
         </label>
         {error && (
-          <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
+          <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-base text-red-700 sm:text-sm">{error}</p>
         )}
         <button
           type="submit"
           disabled={!emailValid || sending}
-          className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-lg font-semibold disabled:opacity-60 disabled:saturate-50"
+          className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-base font-semibold disabled:opacity-60 disabled:saturate-50 sm:text-lg"
         >
           {sending ? "Envoi…" : "Recevoir mon lien de connexion"}
         </button>
