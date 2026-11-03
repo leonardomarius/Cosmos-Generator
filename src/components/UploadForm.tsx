@@ -76,7 +76,7 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
                 type="button"
                 onClick={() => removePhoto(i)}
                 aria-label={`Retirer la photo ${i + 1}`}
-                className="absolute right-4 top-4 flex h-8 w-8 items-center pointer-coarse:right-3 pointer-coarse:top-3 pointer-coarse:h-11 pointer-coarse:w-11 justify-center rounded-full bg-black/60 text-white backdrop-blur-md"
+                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur-md before:absolute before:-inset-2"
               >
                 ×
               </button>
@@ -85,7 +85,7 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
         ))}
         {canAdd && (
           <label
-            className={`liquid-glass liquid-glass--interactive flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-[28px] p-6 text-center focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70 ${photos.length === 0 ? "col-span-2 aspect-auto min-h-48" : ""}`}
+            className={`liquid-glass liquid-glass--interactive flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-[28px] p-4 text-center sm:p-6 focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70 ${photos.length === 0 ? "col-span-2 aspect-auto min-h-48" : ""}`}
           >
             <span className="text-secondary">
               {photos.length === 0
@@ -103,11 +103,11 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
       </div>
 
       {error && (
-        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
+        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-base text-red-700 sm:text-sm">{error}</p>
       )}
 
 
-      <label className="liquid-glass flex items-start gap-3 rounded-[24px] p-5 text-sm leading-relaxed text-secondary">
+      <label className="liquid-glass flex items-start gap-3 rounded-[24px] p-5 text-base leading-relaxed text-secondary sm:text-sm">
         <input
           type="checkbox"
           checked={consent}
@@ -124,7 +124,7 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
       <button
         type="submit"
         disabled={!canGenerate}
-        className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-lg font-semibold disabled:opacity-60 disabled:saturate-50"
+        className="liquid-glass liquid-glass--interactive liquid-glass--accent w-full rounded-full py-4 text-base font-semibold disabled:opacity-60 disabled:saturate-50 sm:text-lg"
       >
         Générer la vidéo · {formatTokens(cost)}
       </button>
@@ -138,7 +138,7 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
         )}
       </p>
 
-      {starting && <p className="text-center text-sm text-secondary">Envoi des photos…</p>}
+      {starting && <p className="text-center text-base text-secondary sm:text-sm">Envoi des photos…</p>}
       <GenerationProgress kind="video" generation={generation} notifiedEmail={notifiedEmail} />
     </form>
   );
