@@ -198,7 +198,8 @@ h3 {
   }
 
   /* Bordure 1 px blanche nette + liseré irisé aux teintes de la fresque */
-  .liquid-glass::before {
+  .liquid-glass::before,
+  .glass-menu::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -308,6 +309,42 @@ h3 {
     transform: none;
   }
 
+  /* Menu déroulant des réglages (générateur) : même verre, plus opaque pour
+     rester lisible au-dessus du contenu. Ouvert en popover (couche
+     supérieure), placé par PromptStudio, qui pose data-placed une fois
+     positionné pour lancer l'apparition. */
+  .glass-menu {
+    position: fixed;
+    inset: auto;
+    isolation: isolate;
+    margin: 0;
+    padding: 6px;
+    border: 0;
+    border-radius: 22px;
+    color: var(--foreground);
+    background: linear-gradient(
+      165deg,
+      rgb(255 255 255 / 0.84) 0%,
+      rgb(255 250 246 / 0.72) 50%,
+      rgb(255 255 255 / 0.8) 100%
+    );
+    -webkit-backdrop-filter: blur(24px) saturate(170%);
+    backdrop-filter: blur(24px) saturate(170%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 24px 50px -20px rgb(var(--glass-shadow) / 0.45),
+      0 6px 18px -10px rgb(var(--glass-shadow) / 0.3);
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+    transition:
+      opacity 160ms var(--ease-soft),
+      transform 220ms var(--ease-soft);
+  }
+  .glass-menu[data-placed] {
+    opacity: 1;
+    transform: none;
+  }
+
   /* Icône en verre épais : squircle teinté ciel → lilas, picto blanc
      dépoli en relief, liseré irisé. L'inclinaison suit la souris
      (--tilt-x / --tilt-y posées par components/GlassTilt.tsx). */
@@ -398,7 +435,8 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   .liquid-glass,
   .liquid-glass::after,
-  .glass-icon {
+  .glass-icon,
+  .glass-menu {
     transition: none;
   }
   .liquid-glass--interactive:hover,
@@ -414,3 +452,129 @@ h3 {
 }
 
 
+
+/* ---------- Accueil : cartes du hero ---------- */
+
+/* Repli de la carte vidéo (components/GenerationCards.tsx) sans vidéo
+   d'exemple : dégradé vivant aux couleurs de la fresque, balayé d'un reflet. */
+.hero-mesh {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(38% 48% at 18% 28%, rgb(var(--fresco-sky) / 0.95), transparent 70%),
+    radial-gradient(42% 52% at 82% 22%, rgb(var(--fresco-lilac) / 0.9), transparent 70%),
+    radial-gradient(48% 58% at 72% 86%, rgb(var(--fresco-peach) / 0.95), transparent 70%),
+    radial-gradient(34% 44% at 22% 88%, rgb(var(--fresco-gold) / 0.7), transparent 70%),
+    #f1e3d8;
+  background-size: 170% 170%;
+  animation: hero-mesh 16s ease-in-out infinite alternate;
+}
+.hero-mesh::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.4) 50%, transparent 65%);
+  translate: -100% 0;
+  animation: hero-sweep 5s var(--ease-soft) infinite;
+}
+
+.hero-mesh--video {
+  animation-direction: alternate-reverse;
+}
+
+@keyframes hero-mesh {
+  from {
+    background-position: 0% 0%;
+  }
+  to {
+    background-position: 100% 100%;
+  }
+}
+
+@keyframes hero-sweep {
+  0%,
+  25% {
+    translate: -100% 0;
+  }
+  75%,
+  100% {
+    translate: 100% 0;
+  }
+}
+
+/* ---------- Passage au chat (view transitions) ---------- */
+
+/* Types posés par router.push / <Link transitionTypes={["to-chat"]}> :
+   l'accueil s'efface vers le haut, le chat monte en place. */
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(.home-exit) {
+  animation: vt-out 200ms var(--ease-soft) both;
+}
+::view-transition-new(.chat-enter) {
+  animation: vt-in 380ms var(--ease-soft) 60ms both;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+    translate: 0 -16px;
+    filter: blur(4px);
+  }
+}
+@keyframes vt-in {
+  from {
+    opacity: 0;
+    translate: 0 20px;
+    filter: blur(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-mesh,
+  .hero-mesh::after {
+    animation: none;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/* ---------- Accueil : comparaison avant / après ---------- */
+
+/* Reflet qui balaie la photo de départ à son arrivée à l'écran
+   (components/BeforeAfter.tsx pose data-intro), avant que le curseur
+   ne la découpe. */
+.compare-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.5) 50%, transparent 70%);
+  translate: -100% 0;
+  opacity: 0;
+}
+.compare[data-intro] .compare-shine {
+  animation: compare-shine 900ms var(--ease-soft) both;
+}
+
+@keyframes compare-shine {
+  0% {
+    translate: -100% 0;
+    opacity: 1;
+  }
+  100% {
+    translate: 100% 0;
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .compare[data-intro] .compare-shine {
+    animation: none;
+  }
+}

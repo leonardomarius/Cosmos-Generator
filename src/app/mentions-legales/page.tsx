@@ -16,7 +16,7 @@ export default function LegalNoticePage() {
       <h2>Intelligence artificielle</h2>
       <p>
         Les images et vidéos produites sur ce site sont générées par intelligence
-        artificielle et portent la mention « Généré par IA ».
+        artificielle et portent la mention « Généré par Cosmos ».
       </p>
     </LegalPage>
   );

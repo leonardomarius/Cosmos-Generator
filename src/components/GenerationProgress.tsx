@@ -38,7 +38,7 @@ export function GenerationProgress({
           La génération a échoué : {generation.error}
         </p>
       )}
-      {generation?.status === "done" && <p className="text-center text-xs text-tertiary">Généré par IA</p>}
+      {generation?.status === "done" && <p className="text-center text-xs text-tertiary">Généré par Cosmos</p>}
       {generation?.status === "done" &&
         (kind === "image" ? (
           <a href={generation.url} target="_blank" rel="noopener noreferrer" className="block">

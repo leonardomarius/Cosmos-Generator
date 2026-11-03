@@ -242,7 +242,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
               Elle t&apos;a aussi été envoyée à <strong className="text-foreground">{email}</strong>.
             </p>
           )}
-          <p className="text-center text-xs text-tertiary">Généré par IA</p>
+          <p className="text-center text-xs text-tertiary">Généré par Cosmos</p>
           <video
             src={result.url}
             controls

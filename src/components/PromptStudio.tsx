@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   ASPECT_RATIOS,
   PROMPT_RULES,
@@ -13,6 +14,7 @@ import {
   type ModelId,
   type VideoDuration,
 } from "@/config/product";
+import { CHAT_HANDOFF_CHARS, handOffToChat } from "@/lib/chat-draft";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { useGeneration } from "@/components/useGeneration";
@@ -20,7 +22,7 @@ import { useGeneration } from "@/components/useGeneration";
 type Photo = { file: File; preview: string };
 type Kind = "image" | "video";
 
-const ASPECT_LABELS: Record<AspectRatio, string> = { "9:16": "Portrait", "16:9": "Paysage", "1:1": "Carré" };
+export const ASPECT_LABELS: Record<AspectRatio, string> = { "9:16": "Portrait", "16:9": "Paysage", "1:1": "Carré" };
 
 // Générateur de l'accueil : une image ou une vidéo à partir d'un prompt,
 // avec ou sans images. Le service fal dépend du choix :
@@ -34,6 +36,39 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
   const [consent, setConsent] = useState(false);
   const { start, error, setError, notifiedEmail, starting, generation, busy } = useGeneration(email);
+  const router = useRouter();
+  // Passage au chat en cours (écoute du champ, arrêtée une fois le chat affiché).
+  const handOff = useRef<AbortController | null>(null);
+
+  // Le chat est préchargé : la redirection n'attend pas le réseau.
+  useEffect(() => router.prefetch("/chat"), [router]);
+
+  // Page quittée (ou masquée) : fin de l'écoute, une nouvelle visite repart
+  // de zéro.
+  useEffect(
+    () => () => {
+      handOff.current?.abort();
+      handOff.current = null;
+    },
+    [],
+  );
+
+  // Au-delà de CHAT_HANDOFF_CHARS caractères, la suite s'écrit dans le chat :
+  // le brouillon (texte, type, réglages, images) y est repris tel quel.
+  function onPromptChange(textarea: HTMLTextAreaElement) {
+    const value = textarea.value;
+    setPrompt(value);
+    if (value.length <= CHAT_HANDOFF_CHARS || handOff.current) return;
+    const draft = { kind, duration, aspectRatio, consent, photos };
+    handOffToChat({ ...draft, prompt: value });
+    // Les lettres tapées jusqu'à l'affichage du chat sont lues sur le champ
+    // lui-même : pendant la transition, React ne traite plus ses événements.
+    handOff.current = new AbortController();
+    textarea.addEventListener("input", () => handOffToChat({ ...draft, prompt: textarea.value }), {
+      signal: handOff.current.signal,
+    });
+    router.push("/chat", { transitionTypes: ["to-chat"] });
+  }
 
   const model: ModelId = kind === "image" ? "image" : photos.length > 0 ? "promptImages" : "prompt";
   const cost = tokensFor(model, duration);
@@ -85,24 +120,12 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
   const canGenerate = prompt.trim().length > 0 && (!needsConsent || consent) && enoughTokens && !busy;
 
   return (
-    <form className="liquid-glass glass-card--clear space-y-5 rounded-[32px] p-4 sm:p-6" onSubmit={onSubmit}>
-      {/* Mobile : le coût s'aligne sur le libellé « Type », au-dessus des boutons. */}
-      <div className="relative sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-        <Choices
-          label="Type"
-          options={(["video", "image"] as const).map((k) => ({ value: k, label: k === "video" ? "Vidéo" : "Image" }))}
-          value={kind}
-          onChange={setKind}
-          disabled={busy}
-        />
-        <span className="absolute right-0 top-0 text-sm text-secondary sm:static">{formatTokens(cost)}</span>
-      </div>
-
+    <form className="liquid-glass glass-card--clear space-y-4 rounded-[32px] p-4 sm:p-6" onSubmit={onSubmit}>
       <label className="block">
         <span className="sr-only">Description</span>
         <textarea
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={(e) => onPromptChange(e.target)}
           maxLength={PROMPT_RULES.maxLength}
           rows={4}
           disabled={busy}
@@ -115,55 +138,69 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
         />
       </label>
 
-      <div className="flex flex-wrap gap-3">
-        {photos.map((photo, i) => (
-          <div key={photo.preview} className="relative">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={photo.preview} alt={`Image ${i + 1}`} className="h-20 w-20 rounded-2xl object-cover" />
-            {!busy && (
-              <button
-                type="button"
-                onClick={() => removePhoto(i)}
-                aria-label={`Retirer l'image ${i + 1}`}
-                className="absolute -right-2 -top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-md before:absolute before:-inset-2"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-        {photos.length < PROMPT_RULES.maxImages && !busy && (
-          // Sans image, pleine largeur sur mobile ; ensuite, une tuile comme les vignettes.
-          <label className={`liquid-glass liquid-glass--interactive flex h-20 min-w-20 cursor-pointer items-center justify-center rounded-2xl px-4 text-center text-sm text-secondary focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70 ${photos.length === 0 ? "flex-1 sm:flex-none" : ""}`}>
-            {photos.length === 0 ? "+ Ajouter des images (facultatif)" : "+ Image"}
-            <input
-              type="file"
-              multiple
-              accept={UPLOAD_RULES.acceptedTypes.join(",")}
-              onChange={onFileChange}
-              className="sr-only"
-            />
-          </label>
-        )}
-      </div>
+      {photos.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          {photos.map((photo, i) => (
+            <div key={photo.preview} className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photo.preview} alt={`Image ${i + 1}`} className="h-16 w-16 rounded-2xl object-cover" />
+              {!busy && (
+                <button
+                  type="button"
+                  onClick={() => removePhoto(i)}
+                  aria-label={`Retirer l'image ${i + 1}`}
+                  className="absolute -right-2 -top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur-md before:absolute before:-inset-2"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
-      <div className="grid gap-4 sm:flex sm:flex-wrap sm:gap-x-6 sm:gap-y-3">
-        {kind === "video" && (
-          <Choices
-            label="Durée"
-            options={VIDEO_DURATIONS.map((d) => ({ value: d, label: `${d} s` }))}
-            value={duration}
-            onChange={setDuration}
+      {/* Réglages repliés en menus déroulants natifs (roue de sélection sur
+          iPhone). Mobile : grille de 2 colonnes, la dernière pilule seule
+          prend toute la largeur, coût en dessous ; dès 640 px, une ligne. */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto [&>:last-child:nth-child(odd)]:col-span-2">
+          <Picker
+            label="Type"
+            options={(["video", "image"] as const).map((k) => ({ value: k, label: k === "video" ? "Vidéo" : "Image" }))}
+            value={kind}
+            onChange={setKind}
             disabled={busy}
           />
-        )}
-        <Choices
-          label="Format"
-          options={ASPECT_RATIOS.map((r) => ({ value: r, label: ASPECT_LABELS[r] }))}
-          value={aspectRatio}
-          onChange={setAspectRatio}
-          disabled={busy}
-        />
+          {kind === "video" && (
+            <Picker
+              label="Durée"
+              options={VIDEO_DURATIONS.map((d) => ({ value: d, label: `${d} s` }))}
+              value={duration}
+              onChange={setDuration}
+              disabled={busy}
+            />
+          )}
+          <Picker
+            label="Format"
+            options={ASPECT_RATIOS.map((r) => ({ value: r, label: ASPECT_LABELS[r] }))}
+            value={aspectRatio}
+            onChange={setAspectRatio}
+            disabled={busy}
+          />
+          {photos.length < PROMPT_RULES.maxImages && !busy && (
+            <label className="liquid-glass liquid-glass--interactive flex min-h-9 cursor-pointer items-center justify-center rounded-full px-4 text-sm font-medium text-secondary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-3 has-[:focus-visible]:outline-foreground/85 pointer-coarse:min-h-11">
+              + Images
+              <input
+                type="file"
+                multiple
+                accept={UPLOAD_RULES.acceptedTypes.join(",")}
+                onChange={onFileChange}
+                className="sr-only"
+              />
+            </label>
+          )}
+        </div>
+        <span className="ml-auto whitespace-nowrap pl-1 text-sm text-secondary">{formatTokens(cost)}</span>
       </div>
 
       {needsConsent && (
@@ -220,9 +257,11 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
   );
 }
 
-// Groupe de boutons à choix unique (type, durée, format). Mobile : libellé
-// au-dessus, boutons qui se partagent la rangée ; dès 640 px, sur une ligne.
-function Choices<T extends string | number>({
+// Menu déroulant en pilule de verre (type, durée, format). La liste s'ouvre
+// en popover, dans la couche supérieure : elle échappe au overflow:hidden de
+// la carte. Placée sous le bouton, ou au-dessus faute de place en bas.
+// Repris par le chat (CosmosChat).
+export function Picker<T extends string | number>({
   label,
   options,
   value,
@@ -235,22 +274,116 @@ function Choices<T extends string | number>({
   onChange: (value: T) => void;
   disabled: boolean;
 }) {
+  const menuId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const current = options.find((o) => o.value === value)!;
+
+  useEffect(() => {
+    if (!open) return;
+    const trigger = triggerRef.current!;
+    const menu = menuRef.current!;
+    const place = () => {
+      const r = trigger.getBoundingClientRect();
+      const viewport = document.documentElement;
+      menu.style.minWidth = `${r.width}px`;
+      const below = r.bottom + 6 + menu.offsetHeight <= viewport.clientHeight - 8 || r.top < menu.offsetHeight + 14;
+      menu.style.top = `${below ? r.bottom + 6 : r.top - 6 - menu.offsetHeight}px`;
+      menu.style.left = `${Math.max(8, Math.min(r.left, viewport.clientWidth - menu.offsetWidth - 8))}px`;
+      menu.style.transformOrigin = below ? "top" : "bottom";
+    };
+    place();
+    menu.dataset.placed = "";
+    menu.querySelector<HTMLElement>('[aria-selected="true"]')?.focus();
+    addEventListener("scroll", place, true);
+    addEventListener("resize", place);
+    return () => {
+      delete menu.dataset.placed;
+      removeEventListener("scroll", place, true);
+      removeEventListener("resize", place);
+    };
+  }, [open]);
+
+  function choose(option: T) {
+    onChange(option);
+    menuRef.current!.hidePopover();
+  }
+
+  // Flèches, Début, Fin : on parcourt la liste ; Tab la referme.
+  function onMenuKeyDown(e: React.KeyboardEvent) {
+    const items = Array.from(menuRef.current!.querySelectorAll<HTMLElement>('[role="option"]'));
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    const next = ({ ArrowDown: i + 1, ArrowUp: i - 1, Home: 0, End: items.length - 1 } as Record<string, number>)[e.key];
+    if (next !== undefined) {
+      e.preventDefault();
+      items[(next + items.length) % items.length].focus();
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      menuRef.current!.hidePopover();
+    }
+  }
+
   return (
-    <div role="group" aria-label={label} className="grid gap-2 sm:flex sm:items-center">
-      <span className="text-sm text-tertiary">{label}</span>
-      <div className="flex gap-2">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={option.value === value}
-            onClick={() => onChange(option.value)}
-            disabled={disabled}
-            className={`liquid-glass liquid-glass--interactive min-h-9 flex-1 rounded-full px-2 text-sm font-medium sm:flex-none sm:px-4 pointer-coarse:min-h-11 ${option.value === value ? "liquid-glass--accent" : "text-secondary"}`}
-          >
-            {option.label}
-          </button>
-        ))}
+    <div>
+      <button
+        ref={triggerRef}
+        type="button"
+        popoverTarget={menuId}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`${label} : ${current.label}`}
+        disabled={disabled}
+        className="liquid-glass liquid-glass--interactive flex min-h-9 w-full items-center justify-between gap-2.5 rounded-full pl-4 pr-3.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11"
+      >
+        {/* Largeur du plus long choix réservée : la pilule ne bouge pas. */}
+        <span className="grid justify-items-start">
+          {options.map((option) => (
+            <span key={option.value} aria-hidden="true" className="invisible col-start-1 row-start-1">
+              {option.label}
+            </span>
+          ))}
+          <span className="col-start-1 row-start-1">{current.label}</span>
+        </span>
+        <svg
+          viewBox="0 0 12 12"
+          aria-hidden="true"
+          className={`h-3 w-3 fill-none stroke-current stroke-[1.6] text-secondary transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        >
+          <path d="m3 4.5 3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <div
+        ref={menuRef}
+        id={menuId}
+        popover="auto"
+        role="listbox"
+        aria-label={label}
+        // Fermé alors que le focus est dans la liste (choix, Échap, Tab) : il
+        // revient au bouton. Un clic ailleurs le déplace ensuite normalement.
+        onBeforeToggle={(e) => {
+          if (e.newState === "closed" && e.currentTarget.contains(document.activeElement)) triggerRef.current!.focus();
+        }}
+        onToggle={(e) => setOpen(e.newState === "open")}
+        onKeyDown={onMenuKeyDown}
+        className="glass-menu space-y-0.5"
+      >
+        {options.map((option) => {
+          const selected = option.value === value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              aria-selected={selected}
+              tabIndex={-1}
+              onClick={() => choose(option.value)}
+              className={`flex min-h-9 w-full items-center whitespace-nowrap rounded-[16px] px-3.5 text-left text-sm font-medium outline-none pointer-coarse:min-h-11 ${selected ? "liquid-glass--accent focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-white/80" : "hover:bg-white/60 focus-visible:bg-white/60"}`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
