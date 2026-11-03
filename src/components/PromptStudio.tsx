@@ -170,7 +170,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
             type="checkbox"
             checked={consent}
             onChange={(e) => setConsent(e.target.checked)}
-            className="mt-1 h-4 w-4 accent-orange-500"
+            className="mt-1 h-4 w-4 accent-(--brand)"
             required
           />
           <span>

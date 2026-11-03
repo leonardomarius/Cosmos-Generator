@@ -73,7 +73,7 @@ export function PlanPicker() {
           type="checkbox"
           checked={waiver}
           onChange={(e) => setWaiver(e.target.checked)}
-          className="mt-1 h-4 w-4 accent-orange-500"
+          className="mt-1 h-4 w-4 accent-(--brand)"
         />
         <span>
           Je demande l&apos;accès immédiat à mes tokens et je renonce à mon droit
