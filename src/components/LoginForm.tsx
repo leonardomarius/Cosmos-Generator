@@ -39,7 +39,7 @@ export function LoginForm() {
   if (sentTo) {
     return (
       <p className="liquid-glass mt-10 rounded-[24px] px-5 py-4 text-center leading-relaxed text-secondary">
-        Lien envoyé à <strong className="text-white">{sentTo}</strong>. Ouvre-le dans ce navigateur pour te connecter.
+        Lien envoyé à <strong className="text-foreground">{sentTo}</strong>. Ouvre-le dans ce navigateur pour te connecter.
       </p>
     );
   }
@@ -57,7 +57,7 @@ export function LoginForm() {
           Continuer avec Google
         </button>
       </form>
-      <p className="flex items-center gap-4 text-sm text-secondary before:h-px before:flex-1 before:bg-white/15 after:h-px after:flex-1 after:bg-white/15">
+      <p className="flex items-center gap-4 text-sm text-secondary before:h-px before:flex-1 before:bg-foreground/15 after:h-px after:flex-1 after:bg-foreground/15">
         ou par email
       </p>
       <form className="space-y-6" onSubmit={onSubmit}>
@@ -71,11 +71,11 @@ export function LoginForm() {
             autoComplete="email"
             placeholder="toi@exemple.fr"
             required
-            className="mt-2 w-full rounded-full border border-white/15 bg-black/30 px-4 py-3 text-base text-white placeholder:text-white/40 focus:outline-2 focus:outline-offset-2 focus:outline-white/70"
+            className="mt-2 w-full rounded-full border border-foreground/15 bg-white/80 px-4 py-3 text-base text-foreground placeholder:text-foreground/40 focus:outline-2 focus:outline-offset-2 focus:outline-foreground/70"
           />
         </label>
         {error && (
-          <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
+          <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
         )}
         <button
           type="submit"

@@ -17,7 +17,7 @@ export function GenerationProgress({
       {notifiedEmail && (generation?.status === "queued" || generation?.status === "running") && (
         <p className="liquid-glass rounded-[24px] px-5 py-4 text-center text-sm leading-relaxed text-secondary">
           C&apos;est lancé ! Tu peux fermer cette page : {what.toLowerCase()} sera envoyée à{" "}
-          <strong className="text-white">{notifiedEmail}</strong> dès qu&apos;elle sera prête.
+          <strong className="text-foreground">{notifiedEmail}</strong> dès qu&apos;elle sera prête.
         </p>
       )}
       {generation?.status === "queued" && (
@@ -34,7 +34,7 @@ export function GenerationProgress({
         </p>
       )}
       {generation?.status === "failed" && (
-        <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">
           La génération a échoué : {generation.error}
         </p>
       )}
@@ -46,7 +46,7 @@ export function GenerationProgress({
             <img
               src={generation.url}
               alt="Image générée"
-              className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-[28px] shadow-2xl shadow-black/50"
+              className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-[28px] shadow-2xl shadow-black/20"
             />
           </a>
         ) : (
@@ -55,7 +55,7 @@ export function GenerationProgress({
             controls
             autoPlay
             loop
-            className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-[28px] shadow-2xl shadow-black/50"
+            className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-[28px] shadow-2xl shadow-black/20"
           />
         ))}
     </>

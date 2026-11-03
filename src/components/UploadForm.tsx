@@ -85,7 +85,7 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
         ))}
         {canAdd && (
           <label
-            className={`liquid-glass liquid-glass--interactive flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-[28px] p-6 text-center focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-white/70 ${photos.length === 0 ? "col-span-2 aspect-auto min-h-48" : ""}`}
+            className={`liquid-glass liquid-glass--interactive flex aspect-[3/4] flex-col items-center justify-center gap-2 rounded-[28px] p-6 text-center focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70 ${photos.length === 0 ? "col-span-2 aspect-auto min-h-48" : ""}`}
           >
             <span className="text-secondary">
               {photos.length === 0
@@ -103,7 +103,7 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
       </div>
 
       {error && (
-        <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
+        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
       )}
 
 
@@ -129,7 +129,7 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
         Générer la vidéo · {formatTokens(cost)}
       </button>
       <p className="text-center text-sm text-secondary">
-        Solde : <strong className="text-white">{formatTokens(balance)}</strong>
+        Solde : <strong className="text-foreground">{formatTokens(balance)}</strong>
         {!enoughTokens && (
           <>
             {" "}· pas assez pour une vidéo.{" "}

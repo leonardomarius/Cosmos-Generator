@@ -33,7 +33,7 @@ export function CancelButton({ until }: { until: string | null }) {
       >
         {pending ? "Résiliation…" : "Résilier"}
       </button>
-      {error && <p className="text-sm text-red-300">{error}</p>}
+      {error && <p className="text-sm text-red-700">{error}</p>}
     </>
   );
 }

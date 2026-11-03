@@ -89,7 +89,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
   const giftsFilled = gifts.every((g) => g.trim().length > 0);
   const canGenerate = photo !== null && giftsFilled && consent && enoughTokens && !busy;
   const field =
-    "w-full rounded-[20px] border border-white/10 bg-black/25 px-4 py-3 text-base placeholder:text-tertiary focus:border-white/30 focus:outline-none";
+    "w-full rounded-[20px] border border-foreground/15 bg-white/80 px-4 py-3 text-base placeholder:text-tertiary focus:border-foreground/40 focus:outline-none";
 
   return (
     <form className="mt-10 space-y-6" onSubmit={onSubmit}>
@@ -128,7 +128,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
             )}
           </div>
         ) : (
-          <label className="liquid-glass liquid-glass--interactive flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-[28px] p-6 text-center focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-white/70">
+          <label className="liquid-glass liquid-glass--interactive flex min-h-40 cursor-pointer flex-col items-center justify-center gap-2 rounded-[28px] p-6 text-center focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70">
             <span className="font-semibold">Ajouter une photo</span>
             <span className="text-sm text-secondary">
               Visage de face, net et bien éclairé, l&apos;enfant seul sur la photo.
@@ -168,7 +168,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
                 type="button"
                 onClick={() => setGifts((current) => current.filter((_, j) => j !== i))}
                 aria-label={`Retirer le cadeau ${i + 1}`}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-white"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground/8 text-foreground"
               >
                 ×
               </button>
@@ -194,7 +194,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
       </p>
 
       {error && (
-        <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
+        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
       )}
 
       <label className="liquid-glass flex items-start gap-3 rounded-[24px] p-5 text-sm leading-relaxed text-secondary">
@@ -219,7 +219,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
         Créer la vidéo du Père Noël · {formatTokens(cost)}
       </button>
       <p className="text-center text-sm text-secondary">
-        Solde : <strong className="text-white">{formatTokens(balance)}</strong>
+        Solde : <strong className="text-foreground">{formatTokens(balance)}</strong>
         {!enoughTokens && (
           <>
             {" "}· pas assez pour cette vidéo.{" "}
@@ -237,7 +237,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
         <div className="space-y-3">
           {result.emailed && (
             <p className="text-center text-sm text-secondary">
-              Elle t&apos;a aussi été envoyée à <strong className="text-white">{email}</strong>.
+              Elle t&apos;a aussi été envoyée à <strong className="text-foreground">{email}</strong>.
             </p>
           )}
           <p className="text-center text-xs text-tertiary">Généré par IA</p>
@@ -246,7 +246,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
             controls
             autoPlay
             playsInline
-            className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-[28px] shadow-2xl shadow-black/50"
+            className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-[28px] shadow-2xl shadow-black/20"
           />
         </div>
       )}

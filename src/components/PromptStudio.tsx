@@ -85,7 +85,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
   const canGenerate = prompt.trim().length > 0 && (!needsConsent || consent) && enoughTokens && !busy;
 
   return (
-    <form className="liquid-glass space-y-5 rounded-[32px] p-4 sm:p-6" onSubmit={onSubmit}>
+    <form className="liquid-glass glass-card--clear space-y-5 rounded-[32px] p-4 sm:p-6" onSubmit={onSubmit}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Choices
           label="Type"
@@ -110,7 +110,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
               ? "Décris ta vidéo : un astronaute qui surfe sur les anneaux de Saturne, caméra qui tourne autour de lui…"
               : "Décris ton image : un portrait de mon chat en général romain, peinture à l'huile…"
           }
-          className="w-full resize-y rounded-[20px] border border-white/10 bg-black/25 px-4 py-3 text-base leading-relaxed placeholder:text-tertiary focus:border-white/30 focus:outline-none"
+          className="w-full resize-y rounded-[20px] border border-foreground/15 bg-white/80 px-4 py-3 text-base leading-relaxed placeholder:text-tertiary focus:border-foreground/40 focus:outline-none"
         />
       </label>
 
@@ -132,7 +132,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
           </div>
         ))}
         {photos.length < PROMPT_RULES.maxImages && !busy && (
-          <label className="liquid-glass liquid-glass--interactive flex h-20 min-w-20 cursor-pointer items-center justify-center rounded-2xl px-4 text-center text-sm text-secondary focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-white/70">
+          <label className="liquid-glass liquid-glass--interactive flex h-20 min-w-20 cursor-pointer items-center justify-center rounded-2xl px-4 text-center text-sm text-secondary focus-within:outline-2 focus-within:outline-offset-4 focus-within:outline-foreground/70">
             {photos.length === 0 ? "+ Ajouter des images (facultatif)" : "+ Image"}
             <input
               type="file"
@@ -181,7 +181,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
       )}
 
       {error && (
-        <p className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
+        <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
       )}
 
       {email === null ? (
@@ -201,7 +201,7 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
             Générer {kind === "video" ? "la vidéo" : "l'image"} · {formatTokens(cost)}
           </button>
           <p className="text-center text-sm text-secondary">
-            Solde : <strong className="text-white">{formatTokens(balance)}</strong>
+            Solde : <strong className="text-foreground">{formatTokens(balance)}</strong>
             {!enoughTokens && (
               <>
                 {" "}· pas assez.{" "}
