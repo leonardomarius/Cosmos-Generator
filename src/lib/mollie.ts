@@ -20,11 +20,10 @@ import {
   type PackId,
   type PlanId,
 } from "@/config/product";
+import { INTERVAL_MONTHS, addMonths, upgradeQuote } from "@/lib/billing-dates";
 import { publicBaseUrl } from "@/lib/fal";
 import { adminClient } from "@/lib/supabase";
 import {
-  addMonths,
-  annualMonth,
   blockAccountForChargeback,
   creditPurchasedTokens,
   isAccountBlocked,
@@ -34,10 +33,6 @@ import {
 } from "@/lib/tokens";
 
 const API = "https://api.mollie.com/v2";
-// En dessous, le prorata d'une montée de plan n'est pas facturé : le nouveau
-// plan s'applique au renouvellement suivant.
-const MIN_CHARGE_EUR = 1;
-const INTERVAL_MONTHS: Record<BillingInterval, number> = { month: 1, year: 12 };
 const MOLLIE_INTERVAL: Record<BillingInterval, string> = { month: "1 month", year: "12 months" };
 const INTERVAL_LABEL: Record<BillingInterval, string> = { month: "mensuel", year: "annuel" };
 
@@ -213,16 +208,6 @@ async function createSubscription(
   );
 }
 
-// Parts restantes au moment d'une montée de plan : le prix se paie sur le reste
-// de la période (un mois ou un an), les tokens se créditent sur le reste du
-// mois en cours, puisque le quota revient à chaque recharge mensuelle.
-export function upgradeFractions(interval: BillingInterval, periodEnd: Date, now = new Date()) {
-  const part = (from: Date, to: Date) => Math.min(Math.max((+to - +now) / (+to - +from), 0), 1);
-  const priceFraction = part(addMonths(periodEnd, -INTERVAL_MONTHS[interval]), periodEnd);
-  const month = interval === "year" ? annualMonth(periodEnd, now) : null;
-  return { priceFraction, tokenFraction: month ? part(month.from, month.to) : priceFraction };
-}
-
 export type PlanChange = "resumed" | "upgraded" | "scheduled";
 
 // Changement de plan d'un abonné :
@@ -268,14 +253,13 @@ export async function changePlan(userId: string, plan: PlanId, interval: Billing
   if (!row.mollie_subscription_id) throw new Error(`Abonnement de ${userId} sans identifiant Mollie`);
 
   if (interval === current) {
-    const { priceFraction, tokenFraction } = upgradeFractions(current, periodEnd);
-    const prorata = (planPriceEur(plan, current) - planPriceEur(row.plan, current)) * priceFraction;
-    if (prorata >= MIN_CHARGE_EUR) {
+    const quote = upgradeQuote(row.plan, plan, current, periodEnd);
+    if (quote) {
       await mollie(
         "POST",
         "/payments",
         {
-          amount: euros(prorata),
+          amount: euros(quote.amountEur),
           description: `Cosmos Generator, passage au plan ${PLANS[plan].label}`,
           customerId: customer,
           mandateId: row.mollie_mandate_id,
@@ -286,8 +270,8 @@ export async function changePlan(userId: string, plan: PlanId, interval: Billing
             user_id: userId,
             plan,
             interval,
-            price_fraction: priceFraction,
-            token_fraction: tokenFraction,
+            price_fraction: quote.priceFraction,
+            token_fraction: quote.tokenFraction,
           },
         },
         `upgrade/${userId}/${plan}/${row.current_period_end}`,

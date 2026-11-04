@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ANNUAL_FREE_MONTHS,
   PLANS,
@@ -15,6 +15,7 @@ import {
   type PackId,
   type PlanId,
 } from "@/config/product";
+import { upgradeQuote } from "@/lib/billing-dates";
 
 // Abonné en cours, null pour un visiteur ou un client sans abonnement.
 export type ShopViewer = {
@@ -25,6 +26,7 @@ export type ShopViewer = {
   nextInterval: BillingInterval | null;
   // Fin de la période payée, déjà formatée ("12 mars 2027").
   periodEnd: string;
+  periodEndIso: string;
 };
 
 // Exemples de ce que permet une offre : vidéos par prompt de 10 s, ou images.
@@ -60,79 +62,88 @@ function planAction(viewer: ShopViewer | null, plan: PlanId, interval: BillingIn
     : { label: "Passer à ce plan", note: renewal };
 }
 
-// Inactif tant que la case n'est pas cochée : un bouton aria-disabled reste
-// cliquable, pour ramener le client à la case qu'il n'a peut-être pas vue.
-const DISABLED_LOOK = "aria-disabled:cursor-not-allowed aria-disabled:opacity-60 aria-disabled:saturate-50";
+// Ce que le client s'apprête à acheter, repris dans la fenêtre de confirmation.
+type Order = {
+  id: PlanId | PackId;
+  path: string;
+  body: object;
+  title: string;
+  price: string;
+  detail: string;
+  note?: string;
+  confirmLabel: string;
+  // Sous le bouton, une fois la case cochée : ce qui se passe au clic.
+  hint: string;
+};
 
-export function TokenShop({ viewer }: { viewer: ShopViewer | null }) {
+const unit = (interval: BillingInterval) => (interval === "year" ? "an" : "mois");
+const intervalName = (interval: BillingInterval) => (interval === "year" ? "annuel" : "mensuel");
+
+// Récapitulatif d'un choix de plan. Un abonné n'a pas de page de paiement : sa
+// carte enregistrée est prélevée, donc le montant exact est annoncé ici, calculé
+// comme dans changePlan au moment où il clique.
+function planOrder(viewer: ShopViewer | null, id: PlanId, interval: BillingInterval, note?: string): Order {
+  const plan = PLANS[id];
+  const base = {
+    id,
+    path: "/api/billing/checkout",
+    body: { plan: id, interval },
+    title: `Abonnement ${plan.label} ${intervalName(interval)}`,
+  };
+  const price = `${euros(planPriceEur(id, interval))} / ${unit(interval)}`;
+  if (!viewer) {
+    return {
+      ...base,
+      price,
+      detail: `${formatTokens(plan.monthlyTokens)} par mois, rechargés chaque mois sans report.`,
+      note,
+      confirmLabel: "Continuer vers le paiement",
+      hint: "Tu vas passer sur la page de paiement sécurisée de Mollie.",
+    };
+  }
+  const later = {
+    ...base,
+    price: "Aucun paiement aujourd'hui",
+    confirmLabel: "Confirmer",
+    hint: "Ta carte enregistrée sera prélevée à cette date, sans autre confirmation.",
+  };
+  if (viewer.canceled) {
+    return { ...later, detail: `Ton abonnement reprend le ${viewer.periodEnd} : ${price}.` };
+  }
+  if (id === viewer.plan && interval === viewer.interval) {
+    return {
+      ...later,
+      detail: `Le changement programmé est annulé. Le ${viewer.periodEnd}, tu restes sur ce plan : ${price}.`,
+    };
+  }
+  const quote = interval === viewer.interval ? upgradeQuote(viewer.plan, id, interval, new Date(viewer.periodEndIso)) : null;
+  if (quote) {
+    return {
+      ...base,
+      price: `${euros(quote.amountEur)} aujourd'hui`,
+      detail: `Différence au prorata jusqu'au ${viewer.periodEnd}. ${formatTokens(quote.tokens)} ajoutés dès le paiement confirmé, puis ${formatTokens(plan.monthlyTokens)} par mois.`,
+      note: `À partir du ${viewer.periodEnd} : ${price}.`,
+      confirmLabel: `Payer ${euros(quote.amountEur)}`,
+      hint: "Prélevé tout de suite sur ta carte enregistrée, sans passer par la page de paiement.",
+    };
+  }
+  return { ...later, detail: `Le changement s'applique le ${viewer.periodEnd} : ${price}.` };
+}
+
+// signedOut : visiteur non connecté, renvoyé à la connexion dès qu'il choisit.
+export function TokenShop({ viewer, signedOut = false }: { viewer: ShopViewer | null; signedOut?: boolean }) {
   const router = useRouter();
-  const waiverRef = useRef<HTMLInputElement>(null);
   const [interval, setInterval] = useState<BillingInterval>(viewer?.interval ?? "month");
-  const [waiver, setWaiver] = useState(false);
-  const [nudged, setNudged] = useState(false);
-  const [pending, setPending] = useState<PlanId | PackId | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
 
-  async function buy(id: PlanId | PackId, path: string, body: object) {
-    if (!waiver) {
-      setNudged(true);
-      waiverRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-      waiverRef.current?.focus({ preventScroll: true });
-      return;
-    }
-    if (pending) return;
-    setError(null);
-    setPending(id);
-    const res = await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...body, waiver }),
-    });
-    const data = await res.json();
-    if (res.status === 401) {
-      router.push("/connexion?next=/abonnement");
-      return;
-    }
-    if (!res.ok) {
-      setPending(null);
-      setError(data.error);
-      return;
-    }
-    // Page de paiement Mollie, ou le compte après un changement de plan.
-    window.location.assign(data.url);
+  function choose(next: Order) {
+    if (signedOut) router.push("/connexion?next=/abonnement");
+    else setOrder(next);
   }
 
   return (
-    <div className="mt-10 space-y-8">
-      <div className="liquid-glass rounded-[24px] p-5">
-        <label className="flex cursor-pointer items-start gap-3 text-base leading-relaxed text-secondary sm:text-sm">
-          <input
-            ref={waiverRef}
-            type="checkbox"
-            checked={waiver}
-            onChange={(e) => setWaiver(e.target.checked)}
-            aria-describedby="waiver-status"
-            className="mt-1 h-5 w-5 shrink-0 accent-(--brand) sm:h-4 sm:w-4"
-          />
-          <span>
-            Je demande l&apos;accès immédiat à mes tokens, par abonnement ou par achat unique, et je renonce à mon droit
-            de rétractation de 14 jours pour ce contenu numérique.
-          </span>
-        </label>
-        <p
-          id="waiver-status"
-          aria-live="polite"
-          className={`mt-2 pl-8 text-sm sm:pl-7 ${nudged && !waiver ? "font-semibold text-foreground" : "text-secondary"}`}
-        >
-          {waiver ? "C'est bon, tu peux choisir ton offre." : "Coche cette case pour activer les boutons d'achat."}
-        </p>
-      </div>
-
-      {error && (
-        <p role="alert" className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-base text-red-700 sm:text-sm">
-          {error}
-        </p>
-      )}
+    <div className="mt-10">
+      {order && <ConfirmDialog key={order.id} order={order} onClose={() => setOrder(null)} />}
 
       {/* Dès 1280 px : abonnements sur 2/3, packs sur 1/3. En dessous : empilés. */}
       <div className="grid gap-10 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:gap-6">
@@ -172,12 +183,11 @@ export function TokenShop({ viewer }: { viewer: ShopViewer | null }) {
                     {action.note && <p className="mb-3 text-center text-sm text-secondary">{action.note}</p>}
                     <button
                       type="button"
-                      onClick={() => buy(id, "/api/billing/checkout", { plan: id, interval })}
+                      onClick={() => choose(planOrder(viewer, id, interval, action.note))}
                       disabled={action.disabled}
-                      aria-disabled={!waiver || pending !== null}
-                      className={`liquid-glass liquid-glass--interactive liquid-glass--accent min-h-12 w-full rounded-full px-4 py-3 font-semibold disabled:opacity-60 disabled:saturate-50 ${DISABLED_LOOK}`}
+                      className="liquid-glass liquid-glass--interactive liquid-glass--accent min-h-12 w-full rounded-full px-4 py-3 font-semibold disabled:opacity-60 disabled:saturate-50"
                     >
-                      {pending === id ? "Redirection…" : action.label}
+                      {action.label}
                     </button>
                   </div>
                 </div>
@@ -205,12 +215,22 @@ export function TokenShop({ viewer }: { viewer: ShopViewer | null }) {
                     </p>
                     <button
                       type="button"
-                      onClick={() => buy(id, "/api/billing/pack", { pack: id })}
-                      aria-disabled={!waiver || pending !== null}
+                      onClick={() =>
+                        choose({
+                          id,
+                          path: "/api/billing/pack",
+                          body: { pack: id },
+                          title: `Achat unique de ${formatTokens(pack.tokens)}`,
+                          price: euros(pack.priceEur),
+                          detail: "Paiement en une fois, tokens sans expiration.",
+                          confirmLabel: "Continuer vers le paiement",
+                          hint: "Tu vas passer sur la page de paiement sécurisée de Mollie.",
+                        })
+                      }
                       aria-label={`Acheter ${formatTokens(pack.tokens)}`}
-                      className={`liquid-glass liquid-glass--interactive min-h-11 shrink-0 rounded-full px-5 font-semibold ${DISABLED_LOOK}`}
+                      className="liquid-glass liquid-glass--interactive min-h-11 shrink-0 rounded-full px-5 font-semibold"
                     >
-                      {pending === id ? "Redirection…" : "Acheter"}
+                      Acheter
                     </button>
                   </div>
                   <p className="mt-2 text-sm text-secondary">{capacity(pack.tokens)}</p>
@@ -225,6 +245,98 @@ export function TokenShop({ viewer }: { viewer: ShopViewer | null }) {
         </section>
       </div>
     </div>
+  );
+}
+
+// Dernière étape avant le paiement : le récapitulatif et la renonciation au
+// droit de rétractation (art. L221-28 du Code de la consommation), qui ne peut
+// pas figurer sur la page de paiement hébergée par Mollie. Décochée à chaque ouverture.
+function ConfirmDialog({ order, onClose }: { order: Order; onClose: () => void }) {
+  const router = useRouter();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [waiver, setWaiver] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!dialogRef.current?.open) dialogRef.current?.showModal();
+  }, []);
+
+  async function confirm() {
+    setError(null);
+    setPending(true);
+    const res = await fetch(order.path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...order.body, waiver }),
+    });
+    const data = await res.json();
+    if (res.status === 401) {
+      router.push("/connexion?next=/abonnement");
+      return;
+    }
+    if (!res.ok) {
+      setPending(false);
+      setError(data.error);
+      return;
+    }
+    // Page de paiement Mollie, ou le compte après un changement de plan.
+    window.location.assign(data.url);
+  }
+
+  return (
+    <dialog
+      ref={dialogRef}
+      onClose={onClose}
+      aria-labelledby="confirm-title"
+      className="m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-[28px] bg-transparent p-0 text-foreground backdrop:bg-foreground/40 backdrop:backdrop-blur-sm"
+    >
+      <div className="liquid-glass rounded-[28px] p-5 sm:p-6 [background:rgb(255_255_255/0.88)]">
+        <h2 id="confirm-title" className="text-xl font-semibold">{order.title}</h2>
+        <p className="mt-2 text-2xl font-semibold">{order.price}</p>
+        <p className="mt-2 text-secondary">{order.detail}</p>
+        {order.note && <p className="mt-2 text-sm text-secondary">{order.note}</p>}
+
+        <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-secondary">
+          <input
+            type="checkbox"
+            checked={waiver}
+            onChange={(e) => setWaiver(e.target.checked)}
+            className="mt-1 h-5 w-5 shrink-0 accent-(--brand) sm:h-4 sm:w-4"
+          />
+          <span>
+            Je demande l&apos;accès immédiat à mes tokens, par abonnement ou par achat unique, et je renonce à mon droit
+            de rétractation de 14 jours pour ce contenu numérique.
+          </span>
+        </label>
+
+        {error && (
+          <p role="alert" className="mt-4 rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-base text-red-700 sm:text-sm">
+            {error}
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={confirm}
+          disabled={!waiver || pending}
+          className="liquid-glass liquid-glass--interactive liquid-glass--accent mt-4 min-h-12 w-full rounded-full px-4 py-3 font-semibold disabled:opacity-60 disabled:saturate-50"
+        >
+          {pending ? "Un instant…" : order.confirmLabel}
+        </button>
+        <p aria-live="polite" className="mt-2 text-center text-sm text-secondary">
+          {waiver ? order.hint : "Coche la case pour continuer."}
+        </p>
+        <button
+          type="button"
+          onClick={() => dialogRef.current?.close()}
+          disabled={pending}
+          className="mt-1 min-h-11 w-full rounded-full px-4 font-semibold text-secondary underline underline-offset-4 disabled:opacity-60"
+        >
+          Annuler
+        </button>
+      </div>
+    </dialog>
   );
 }
 

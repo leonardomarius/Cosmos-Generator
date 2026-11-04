@@ -34,7 +34,7 @@ export default function ShopPage() {
 // La boutique connaît l'abonnement en cours pour dire ce que fait chaque bouton.
 async function AccountShop() {
   const user = await currentUser();
-  if (!user) return <TokenShop viewer={null} />;
+  if (!user) return <TokenShop viewer={null} signedOut />;
   const account = await getAccount(user.id);
   if (account.blocked) {
     return (
@@ -51,6 +51,7 @@ async function AccountShop() {
         canceled: account.cancelAtPeriodEnd,
         nextPlan: account.nextPlan,
         nextInterval: account.nextInterval,
+        periodEndIso: account.currentPeriodEnd!,
         periodEnd: new Date(account.currentPeriodEnd!).toLocaleDateString("fr-FR", {
           day: "numeric",
           month: "long",

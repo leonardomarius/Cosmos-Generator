@@ -2,6 +2,7 @@
 // sont des fonctions SQL (supabase/migrations) : chacune verrouille le solde
 // et ne s'applique qu'une fois par référence, même si un webhook est rejoué.
 import { PLANS, isBillingInterval, isPlanId, type BillingInterval, type PlanId } from "@/config/product";
+import { annualMonth } from "@/lib/billing-dates";
 import { adminClient } from "@/lib/supabase";
 
 export class InsufficientTokensError extends Error {}
@@ -34,29 +35,6 @@ export type Account = {
 // Un prélèvement SEPA met quelques jours à être confirmé : l'accès reste
 // ouvert pendant ce délai après la fin de la période.
 const RENEWAL_GRACE_MS = 5 * 24 * 60 * 60 * 1000;
-
-// Date + n mois (n peut être négatif), bornée à la fin du mois d'arrivée :
-// 31 janvier + 1 mois = 28 février, là où setUTCMonth déborderait en mars.
-export function addMonths(date: Date, months: number): Date {
-  const result = new Date(date);
-  result.setUTCDate(1);
-  result.setUTCMonth(result.getUTCMonth() + months);
-  const lastDay = new Date(Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)).getUTCDate();
-  result.setUTCDate(Math.min(date.getUTCDate(), lastDay));
-  return result;
-}
-
-// Mois d'abonnement en cours sur une année payée qui finit à "periodEnd" :
-// son numéro (0 à 11) et ses bornes, calculées depuis la date anniversaire
-// (jamais de mois en mois, pour qu'un 28 février ne décale pas la suite).
-// Null en dehors de l'année payée.
-export function annualMonth(periodEnd: Date, now = new Date()) {
-  const start = addMonths(periodEnd, -12);
-  if (now < start || now >= periodEnd) return null;
-  let index = 0;
-  while (index < 11 && addMonths(start, index + 1) <= now) index++;
-  return { index, from: addMonths(start, index), to: addMonths(start, index + 1) };
-}
 
 async function readBalances(userId: string) {
   const { data, error } = await adminClient()
