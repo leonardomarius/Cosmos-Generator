@@ -1,0 +1,34 @@
+{
+  "master": {
+    "file": "public/exemple.mp4",
+    "sha256": "427d3e4a10ade8534302b8c68a05c90093fed9b6149dd9c2f181f4447cbab6cf"
+  },
+  "ffmpeg": "ffmpeg version 6.1.1-essentials_build-www.gyan.dev Copyright (c) 2000-2023 the FFmpeg developers\r",
+  "files": {
+    "raw": {
+      "file": "assets/source.mp4",
+      "sha256": "57345aef365caeabeb88dfeaf4a08f0eeae6cefbf576d6a61270ff5da699b6e7"
+    },
+    "audio": {
+      "file": "assets/audio.m4a",
+      "sha256": "c0816bbda5beb2d8c3cba36057679532dc20b476a863a7a1b99100a672d5f0d3"
+    },
+    "label": {
+      "file": "assets/label.png",
+      "sha256": "0b624cd3a0ed9d0af3b3866ba1811dfb6b463f92a7d80541a8dcf87db39f3aae"
+    },
+    "hero_face": {
+      "file": "assets/hero-face.jpg",
+      "sha256": "4c485e4bbec0f46f3973df5d956de469dfac762350e4721a2cd63746fad7d980"
+    },
+    "hero_body": {
+      "file": "assets/hero-body.jpg",
+      "sha256": "4872bc10c633e9c94c5f61de8272afdbf3df302337adc26203a245cb95f67e3e"
+    },
+    "hero_profile": {
+      "file": "assets/hero-profile.jpg",
+      "sha256": "58cf53db9fc9e332a8a9698e81e3daaf25731236f340c0ff74ba3a02778abf0c"
+    }
+  },
+  "mask_review": null
+}

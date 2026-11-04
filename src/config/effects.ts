@@ -11,6 +11,10 @@ export type Effect = {
   slug: string;
   title: string;
   subtitle: string;
+  // Présentation sur l'accueil.
+  pitch: string;
+  // Aperçu muet affiché sur l'accueil (scripts/prepare-santa-teaser.mjs).
+  preview: { video: string; poster: string };
   // Prix fixe : aucune IA par commande, il ne dépend pas d'un coût fal.
   tokens: number;
   seconds: number;
@@ -21,6 +25,9 @@ export const SANTA_EFFECT = {
   slug: "pere-noel",
   title: "Vidéo du Père Noël",
   subtitle: "Crée une vidéo magique du Père Noël pour ton enfant",
+  pitch:
+    "Le Père Noël découvre le visage de ton enfant et sa liste de cadeaux dans son cadre magique, puis lui fait un sourire complice. Une photo et la liste suffisent : la vidéo est prête tout de suite et envoyée par email.",
+  preview: { video: "/effets/pere-noel-apercu.mp4", poster: "/effets/pere-noel-apercu.jpg" },
   // ≈ 8,04 € avec l'abonnement Star (3 000 tokens pour 24,99 €).
   tokens: 965,
   seconds: 20,

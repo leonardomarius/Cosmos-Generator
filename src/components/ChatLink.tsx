@@ -12,6 +12,9 @@ export function ChatLink({ kind, className, children }: { kind: GenerationKind; 
     <Link
       href={`/chat?type=${kind}`}
       transitionTypes={["to-chat"]}
+      // Le navigateur ne déplace pas le lien : un glissé sur la carte sert à
+      // la comparaison (BeforeAfter).
+      draggable={false}
       onClick={() => chooseChatKind(kind)}
       className={className}
     >

@@ -1,8 +1,9 @@
 import { EFFECTS } from "@/config/effects";
+import { PRESETS } from "@/config/presets";
 import { purgeOldVideos } from "@/lib/video-storage";
 
 // Appelée chaque jour par Vercel Cron (vercel.json) : supprime les vidéos des
-// effets après PRODUCT.retentionDays jours, comme promis aux clients.
+// effets et des presets après PRODUCT.retentionDays jours, comme promis aux clients.
 // Vercel envoie "Authorization: Bearer <CRON_SECRET>" : personne d'autre ne
 // peut déclencher la suppression.
 export async function GET(request: Request) {
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "Non autorisé." }, { status: 401 });
   }
   try {
-    const removed = await purgeOldVideos(EFFECTS.map((effect) => effect.slug));
+    const removed = await purgeOldVideos([...EFFECTS, ...PRESETS].map((item) => item.slug));
     return Response.json({ removed });
   } catch (err) {
     console.error(err);

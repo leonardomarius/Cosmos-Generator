@@ -5,7 +5,7 @@
   "scripts": {
     "predev": "node --env-file-if-exists=.env.local scripts/prepare-video.mjs && node scripts/prepare-web-video.mjs",
     "dev": "next dev",
-    "prebuild": "node --env-file-if-exists=.env.local scripts/prepare-video.mjs && node scripts/prepare-web-video.mjs",
+    "prebuild": "node --env-file-if-exists=.env.local scripts/prepare-video.mjs && node scripts/prepare-web-video.mjs && node scripts/preset-lab.mjs check",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

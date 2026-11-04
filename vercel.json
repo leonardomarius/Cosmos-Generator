@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/purge-videos", "schedule": "0 4 * * *" },
-    { "path": "/api/cron/renewal-reminders", "schedule": "0 7 * * *" }
+    { "path": "/api/cron/renewal-reminders", "schedule": "0 7 * * *" },
+    { "path": "/api/cron/presets", "schedule": "30 4 * * *" }
   ]
 }

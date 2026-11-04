@@ -4,6 +4,8 @@
 
 type Table<Row, Insert> = { Row: Row; Insert: Insert; Update: Partial<Insert>; Relationships: [] };
 
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+
 export type Database = {
   public: {
     Tables: {
@@ -97,6 +99,74 @@ export type Database = {
           status?: string;
           created_at?: string;
         }
+      >;
+      preset_jobs: Table<
+        {
+          id: string;
+          user_id: string;
+          preset_id: string;
+          preset_version: string;
+          variant_id: string;
+          status: string;
+          stage: string;
+          photo_paths: string[];
+          steps: Json;
+          result_url: string | null;
+          error: string | null;
+          error_kind: string | null;
+          cost_usd: number;
+          locked_until: string | null;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          id: string;
+          user_id: string;
+          preset_id: string;
+          preset_version: string;
+          variant_id: string;
+          status?: string;
+          stage: string;
+          photo_paths: string[];
+          steps?: Json;
+          result_url?: string | null;
+          error?: string | null;
+          error_kind?: string | null;
+          cost_usd?: number;
+          locked_until?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        }
+      >;
+      preset_switches: Table<
+        { preset_id: string; reason: string; disabled_at: string },
+        { preset_id: string; reason: string; disabled_at?: string }
+      >;
+      preset_lab_campaigns: Table<
+        {
+          id: string;
+          preset_id: string;
+          preset_version: string;
+          candidate_variant: string;
+          comparator_variant: string;
+          pairs: Json;
+          closes_at: string;
+          created_at: string;
+        },
+        {
+          id?: string;
+          preset_id: string;
+          preset_version: string;
+          candidate_variant: string;
+          comparator_variant: string;
+          pairs: Json;
+          closes_at: string;
+          created_at?: string;
+        }
+      >;
+      preset_lab_votes: Table<
+        { campaign_id: string; rater_id: string; pair_index: number; scores: Json; created_at: string },
+        { campaign_id: string; rater_id: string; pair_index: number; scores: Json; created_at?: string }
       >;
     };
     Views: Record<never, never>;
