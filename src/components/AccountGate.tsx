@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { SuspendedNotice } from "@/components/AccountNotices";
+import { supportEmail } from "@/config/product";
 import { currentUser } from "@/lib/supabase";
 import { getAccount, hasActiveSubscription } from "@/lib/tokens";
 
@@ -20,12 +22,19 @@ export async function AccountGate({
     return <Gate text={`Connecte-toi pour créer ${what}.`} href={`/connexion?next=${next}`} label="Se connecter" />;
   }
   const account = await getAccount(user.id);
+  if (account.blocked) {
+    return (
+      <div className="mt-10">
+        <SuspendedNotice contact={supportEmail()} />
+      </div>
+    );
+  }
   if (!hasActiveSubscription(account) && account.balance === 0) {
     return (
       <Gate
-        text="Choisis un abonnement : tes tokens sont rechargés chaque mois."
+        text="Il te faut des tokens : avec un abonnement rechargé chaque mois, ou un achat unique sans expiration."
         href="/abonnement"
-        label="Voir les abonnements"
+        label="Recharger mes tokens"
       />
     );
   }

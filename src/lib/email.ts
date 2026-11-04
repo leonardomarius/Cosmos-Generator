@@ -1,8 +1,8 @@
 // Envoi des emails au client via l'API REST de Resend, uniquement côté serveur.
-// Chaque email porte une clé d'idempotence liée à la tâche fal : si fal renvoie
-// le même webhook, Resend renvoie la réponse du premier envoi sans renvoyer
-// l'email (Resend garde ces clés 24 h, fal arrête ses renvois au bout d'1 h).
-import { MODELS, PRODUCT, supportEmail, type ModelId } from "@/config/product";
+// Chaque email porte une clé d'idempotence : si fal renvoie le même webhook,
+// Resend renvoie la réponse du premier envoi sans renvoyer l'email (Resend garde
+// ces clés 24 h, fal arrête ses renvois au bout d'1 h).
+import { MODELS, PRODUCT, supportEmail, type BillingInterval, type ModelId } from "@/config/product";
 
 function escapeHtml(text: string) {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -12,6 +12,10 @@ async function sendEmail(params: {
   to: string;
   subject: string;
   lines: string[];
+  // Phrase mise en avant dans un encadré, après les lignes.
+  box?: string;
+  // Après l'encadré et le lien.
+  footer?: string;
   link: { url: string; label: string };
   idempotencyKey: string;
 }) {
@@ -19,11 +23,21 @@ async function sendEmail(params: {
   const from = process.env.EMAIL_FROM;
   if (!apiKey || !from) throw new Error("RESEND_API_KEY ou EMAIL_FROM manquant dans .env.local");
 
-  const { to, subject, lines, link } = params;
-  const text = [...lines, "", `${link.label} : ${link.url}`, "", `— ${PRODUCT.siteName}`].join("\n");
+  const { to, subject, lines, box, footer, link } = params;
+  const text = [
+    ...lines,
+    ...(box ? ["", `>>> ${box} <<<`] : []),
+    "",
+    `${link.label} : ${link.url}`,
+    ...(footer ? ["", footer] : []),
+    "",
+    `— ${PRODUCT.siteName}`,
+  ].join("\n");
   const html = [
     ...lines.map((line) => `<p>${escapeHtml(line)}</p>`),
+    ...(box ? [`<p style="border:2px solid #3f5a96;border-radius:8px;padding:12px 16px;font-weight:600">${escapeHtml(box)}</p>`] : []),
     `<p><a href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a></p>`,
+    ...(footer ? [`<p>${escapeHtml(footer)}</p>`] : []),
     `<p>— ${escapeHtml(PRODUCT.siteName)}</p>`,
   ].join("\n");
 
@@ -79,6 +93,35 @@ export function sendGenerationFailedEmail(to: string, model: ModelId, retryUrl: 
     ],
     link: { url: retryUrl, label: "Relancer une génération" },
     idempotencyKey: `video-failed/${requestId}`,
+  });
+}
+
+// Rappel de renouvellement de l'abonnement annuel (src/lib/renewal-reminders.ts).
+// L'art. L215-1 du Code de la consommation demande un écrit dédié, avec la date
+// limite de non-reconduction dans un encadré apparent.
+export function sendRenewalReminderEmail(params: {
+  to: string;
+  planLabel: string;
+  renewalDate: string;
+  lastCancelDate: string;
+  amountEur: number;
+  interval: BillingInterval;
+  accountUrl: string;
+  idempotencyKey: string;
+}) {
+  const amount = params.amountEur.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+  return sendEmail({
+    to: params.to,
+    subject: `Ton abonnement ${PRODUCT.siteName} se renouvelle le ${params.renewalDate}`,
+    lines: [
+      "Bonjour,",
+      `Ton abonnement ${params.planLabel} se renouvelle automatiquement le ${params.renewalDate}. Le montant prélevé ce jour-là sera de ${amount} TTC ${params.interval === "year" ? "pour une année" : "pour un mois"}.`,
+      "Si tu veux continuer, tu n'as rien à faire. Si tu préfères arrêter, tu peux résilier en un clic depuis ton compte : tes tokens achetés restent à toi.",
+    ],
+    box: `Date limite pour ne pas reconduire ton abonnement : ${params.lastCancelDate}.`,
+    link: { url: params.accountUrl, label: "Résilier ou gérer mon abonnement" },
+    footer: process.env.SUPPORT_EMAIL ? `Une question ? Écris-nous à ${supportEmail()}.` : undefined,
+    idempotencyKey: params.idempotencyKey,
   });
 }
 

@@ -21,8 +21,8 @@ export const SANTA_EFFECT = {
   slug: "pere-noel",
   title: "Vidéo du Père Noël",
   subtitle: "Crée une vidéo magique du Père Noël pour ton enfant",
-  // ≈ 12,50 € avec l'abonnement Star (3 000 tokens pour 24,99 €).
-  tokens: 1500,
+  // ≈ 8,04 € avec l'abonnement Star (3 000 tokens pour 24,99 €).
+  tokens: 965,
   seconds: 20,
 } as const satisfies Effect;
 

@@ -4,7 +4,7 @@ import { ExampleVideo } from "@/components/ExampleVideo";
 import { GenerationCards } from "@/components/GenerationCards";
 import { PromptStudio } from "@/components/PromptStudio";
 import { EFFECTS } from "@/config/effects";
-import { PRODUCT, formatTokens, tokensFor } from "@/config/product";
+import { PRODUCT, formatTokens, supportEmail, tokensFor } from "@/config/product";
 import { currentUser } from "@/lib/supabase";
 import { getAccount } from "@/lib/tokens";
 
@@ -119,5 +119,5 @@ async function StudioGate() {
   const user = await currentUser();
   if (!user?.email) return <PromptStudio email={null} balance={0} />;
   const account = await getAccount(user.id);
-  return <PromptStudio email={user.email} balance={account.balance} />;
+  return <PromptStudio email={user.email} balance={account.balance} suspendedContact={account.blocked ? supportEmail() : null} />;
 }

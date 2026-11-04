@@ -16,6 +16,7 @@ import {
 } from "@/config/product";
 import { CHAT_HANDOFF_CHARS, handOffToChat } from "@/lib/chat-draft";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
+import { SuspendedText } from "@/components/AccountNotices";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { useGeneration } from "@/components/useGeneration";
 
@@ -28,7 +29,16 @@ export const ASPECT_LABELS: Record<AspectRatio, string> = { "9:16": "Portrait", 
 // avec ou sans images. Le service fal dépend du choix :
 // image → "image" ; vidéo sans image → "prompt" ; vidéo avec images → "promptImages".
 // email : celui du compte (null si non connecté) ; balance : solde de tokens.
-export function PromptStudio({ email, balance }: { email: string | null; balance: number }) {
+export function PromptStudio({
+  email,
+  balance,
+  suspendedContact = null,
+}: {
+  email: string | null;
+  balance: number;
+  // Compte bloqué : l'adresse de contact à afficher à la place du solde.
+  suspendedContact?: string | null;
+}) {
   const [kind, setKind] = useState<Kind>("video");
   const [prompt, setPrompt] = useState("");
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -240,11 +250,17 @@ export function PromptStudio({ email, balance }: { email: string | null; balance
             Générer {kind === "video" ? "la vidéo" : "l'image"} · {formatTokens(cost)}
           </button>
           <p className="text-center text-sm text-secondary">
-            Solde : <strong className="text-foreground">{formatTokens(balance)}</strong>
-            {!enoughTokens && (
+            {suspendedContact ? (
+              <SuspendedText contact={suspendedContact} />
+            ) : (
               <>
-                {" "}· pas assez.{" "}
-                <Link href="/abonnement" className="underline underline-offset-4">Voir les abonnements</Link>
+                Solde : <strong className="text-foreground">{formatTokens(balance)}</strong>
+                {!enoughTokens && (
+                  <>
+                    {" "}· pas assez.{" "}
+                    <Link href="/abonnement" className="underline underline-offset-4">Recharger mes tokens</Link>
+                  </>
+                )}
               </>
             )}
           </p>

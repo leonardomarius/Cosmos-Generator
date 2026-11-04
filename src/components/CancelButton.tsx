@@ -2,16 +2,21 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { BillingInterval } from "@/config/product";
 
 // Résiliation de l'abonnement Mollie, après confirmation.
-export function CancelButton({ until }: { until: string | null }) {
+export function CancelButton({ until, interval }: { until: string | null; interval: BillingInterval }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function cancel() {
-    const keep = until ? ` Tu gardes tes tokens jusqu'au ${until}.` : "";
-    if (!window.confirm(`Résilier ton abonnement ?${keep}`)) return;
+    const keep = !until
+      ? ""
+      : interval === "year"
+        ? ` L'année en cours n'est pas remboursée : tes tokens restent rechargés chaque mois jusqu'au ${until}.`
+        : ` Tu gardes tes tokens d'abonnement jusqu'au ${until}.`;
+    if (!window.confirm(`Résilier ton abonnement ?${keep} Tes tokens achetés sont conservés.`)) return;
     setError(null);
     setPending(true);
     const res = await fetch("/api/billing/cancel", { method: "POST" });

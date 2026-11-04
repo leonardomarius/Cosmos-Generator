@@ -1,6 +1,5 @@
 // Toute la configuration "métier" du produit est centralisée ici.
 // Rien de secret : les clés API vont dans le fichier .env.local.
-// Phase de test : aucun prix n'est affiché ni demandé.
 
 export const PRODUCT = {
   siteName: "Cosmos Generator",
@@ -143,34 +142,83 @@ export function formatTokens(n: number): string {
   return `${n.toLocaleString("fr-FR")} token${n > 1 ? "s" : ""}`;
 }
 
-// Abonnements mensuels. Le solde est remis au quota à chaque paiement reçu :
-// les tokens non utilisés ne sont pas reportés.
-// "priceEur" est le montant TTC prélevé chaque mois par Mollie.
+// Abonnements, au mois ou à l'année. Le solde d'abonnement est remis au quota
+// chaque mois (y compris sur l'annuel, payé en une fois) : les tokens non
+// utilisés ne sont pas reportés.
+// "priceEur" et "annualPriceEur" sont les montants TTC prélevés par Mollie.
 // Marge visée : au moins 50 % du HT même si tout le quota est utilisé
 // (calcul dans scripts/economics.mjs).
 export const PLANS = {
   essentiel: {
     label: "Essentiel",
     priceEur: 9.99,
+    annualPriceEur: 99.9,
     monthlyTokens: 1000,
   },
   star: {
     label: "Star",
     priceEur: 24.99,
+    annualPriceEur: 249.9,
     monthlyTokens: 3000,
   },
   producteur: {
     label: "Réalisateur",
     priceEur: 49.99,
+    annualPriceEur: 499.9,
     monthlyTokens: 7000,
   },
 } as const;
 
 export type PlanId = keyof typeof PLANS;
 
+// Mois offerts sur l'annuel, vérifiés par scripts/economics.mjs.
+export const ANNUAL_FREE_MONTHS = 2;
+
+export const BILLING_INTERVALS = ["month", "year"] as const;
+export type BillingInterval = (typeof BILLING_INTERVALS)[number];
+
+export function isBillingInterval(value: unknown): value is BillingInterval {
+  return BILLING_INTERVALS.includes(value as BillingInterval);
+}
+
+export function planPriceEur(plan: PlanId, interval: BillingInterval): number {
+  return interval === "year" ? PLANS[plan].annualPriceEur : PLANS[plan].priceEur;
+}
+
+// Prix annuel ramené au mois, arrondi au centime (99,90 € : 8,33 €).
+export function annualPricePerMonthEur(plan: PlanId): number {
+  return Math.round(Math.round(PLANS[plan].annualPriceEur * 100) / 12) / 100;
+}
+
+// Packs en achat unique : jamais expirés, toujours plus chers au token que
+// n'importe quel abonnement (vérifié par scripts/economics.mjs).
+// "plan" : l'abonnement au même nombre de tokens, pour la comparaison affichée.
+export const TOKEN_PACKS = {
+  pack1000: { tokens: 1000, priceEur: 14.99, plan: "essentiel" },
+  pack3000: { tokens: 3000, priceEur: 37.99, plan: "star" },
+  pack7000: { tokens: 7000, priceEur: 74.99, plan: "producteur" },
+} as const satisfies Record<string, { tokens: number; priceEur: number; plan: PlanId }>;
+
+export type PackId = keyof typeof TOKEN_PACKS;
+
+export function isPackId(value: unknown): value is PackId {
+  return typeof value === "string" && Object.hasOwn(TOKEN_PACKS, value);
+}
+
+// Ce que le client économise chaque mois avec l'abonnement équivalent au pack.
+export function packMonthlySavingEur(pack: PackId): number {
+  const { priceEur, plan } = TOKEN_PACKS[pack];
+  return Math.round((priceEur - PLANS[plan].priceEur) * 100) / 100;
+}
+
 // Email de contact public (SUPPORT_EMAIL), jamais celui des administrateurs.
 export function supportEmail(): string {
   return process.env.SUPPORT_EMAIL || "[Email de contact]";
+}
+
+// Compte bloqué après une rétrofacturation : message calme, sans accusation.
+export function accountSuspendedMessage(): string {
+  return `Ton compte est suspendu à la suite d'une contestation de paiement. Pour en parler, écris-nous à ${supportEmail()}.`;
 }
 
 export function isPlanId(value: unknown): value is PlanId {

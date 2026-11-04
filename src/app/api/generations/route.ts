@@ -1,6 +1,7 @@
 import {
   PROMPT_RULES,
   UPLOAD_RULES,
+  accountSuspendedMessage,
   isAspectRatio,
   isModelId,
   isVideoDuration,
@@ -8,7 +9,7 @@ import {
 } from "@/config/product";
 import { ContentRefusedError, startGeneration, type GenerationRequest } from "@/lib/fal";
 import { currentUser } from "@/lib/supabase";
-import { InsufficientTokensError, markGenerationQueued, reserveGeneration, settleGeneration } from "@/lib/tokens";
+import { AccountBlockedError, InsufficientTokensError, markGenerationQueued, reserveGeneration, settleGeneration } from "@/lib/tokens";
 
 type Invalid = { error: string };
 
@@ -85,8 +86,11 @@ export async function POST(request: Request) {
   try {
     generationId = await reserveGeneration(user.id, req.model, tokens);
   } catch (err) {
+    if (err instanceof AccountBlockedError) {
+      return Response.json({ error: accountSuspendedMessage() }, { status: 403 });
+    }
     if (err instanceof InsufficientTokensError) {
-      return Response.json({ error: "Plus assez de tokens ce mois-ci." }, { status: 402 });
+      return Response.json({ error: "Plus assez de tokens." }, { status: 402 });
     }
     console.error(err);
     return Response.json({ error: "Impossible de lancer la génération." }, { status: 502 });

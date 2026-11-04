@@ -1,9 +1,9 @@
 import { SANTA_EFFECT, SANTA_RULES, SANTA_TEMPLATE, checkChildName, checkGifts, cleanText } from "@/config/effects";
-import { UPLOAD_RULES } from "@/config/product";
+import { UPLOAD_RULES, accountSuspendedMessage } from "@/config/product";
 import { sendSantaVideoEmail } from "@/lib/email";
 import { renderSantaVideo, unsupportedCharacters } from "@/lib/santa-video";
 import { currentUser } from "@/lib/supabase";
-import { InsufficientTokensError, reserveGeneration, settleGeneration } from "@/lib/tokens";
+import { AccountBlockedError, InsufficientTokensError, reserveGeneration, settleGeneration } from "@/lib/tokens";
 import { storeVideo } from "@/lib/video-storage";
 
 // L'assemblage prend quelques secondes ; marge pour un serveur plus lent.
@@ -54,8 +54,11 @@ export async function POST(request: Request) {
   try {
     generationId = await reserveGeneration(user.id, SANTA_EFFECT.id, SANTA_EFFECT.tokens);
   } catch (err) {
+    if (err instanceof AccountBlockedError) {
+      return Response.json({ error: accountSuspendedMessage() }, { status: 403 });
+    }
     if (err instanceof InsufficientTokensError) {
-      return Response.json({ error: "Plus assez de tokens ce mois-ci." }, { status: 402 });
+      return Response.json({ error: "Plus assez de tokens." }, { status: 402 });
     }
     console.error(err);
     return Response.json({ error: "Impossible de créer la vidéo." }, { status: 502 });

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ViewTransition } from "react";
 import { CosmosChat, type ChatAccount } from "@/components/CosmosChat";
+import { supportEmail } from "@/config/product";
 import { currentUser } from "@/lib/supabase";
 import { getAccount } from "@/lib/tokens";
 
@@ -22,5 +23,5 @@ async function loadAccount(): Promise<ChatAccount | null> {
   const user = await currentUser();
   if (!user?.email) return null;
   const account = await getAccount(user.id);
-  return { email: user.email, balance: account.balance };
+  return { email: user.email, balance: account.balance, suspendedContact: account.blocked ? supportEmail() : null };
 }

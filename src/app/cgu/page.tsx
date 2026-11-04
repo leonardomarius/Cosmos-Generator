@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
-import { PRODUCT } from "@/config/product";
+import { PLANS, PRODUCT, TOKEN_PACKS, formatTokens, type PackId, type PlanId } from "@/config/product";
 
 export const metadata: Metadata = { title: "Conditions générales" };
+
+const planIds = Object.keys(PLANS) as PlanId[];
+const euros = (n: number) => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
 
 export default function CguPage() {
   return (
@@ -18,7 +21,32 @@ export default function CguPage() {
         fixe, comme la vidéo du Père Noël.
       </p>
       <h2>Prix</h2>
-      <p>Le service est en phase de test : aucun paiement n&apos;est demandé.</p>
+      <p>
+        Les générations se paient en tokens. Les prix sont indiqués toutes taxes
+        comprises et le paiement est assuré par Mollie. Trois offres sont
+        proposées :
+      </p>
+      <ul>
+        <li>
+          Abonnement mensuel, prélevé chaque mois :{" "}
+          {planIds.map((id) => `${PLANS[id].label}, ${euros(PLANS[id].priceEur)} pour ${formatTokens(PLANS[id].monthlyTokens)} par mois`).join(" ; ")}.
+        </li>
+        <li>
+          Abonnement annuel, payé en une fois pour l&apos;année et renouvelé
+          chaque année :{" "}
+          {planIds.map((id) => `${PLANS[id].label}, ${euros(PLANS[id].annualPriceEur)} pour ${formatTokens(PLANS[id].monthlyTokens)} par mois`).join(" ; ")}.
+        </li>
+        <li>
+          Achat unique, sans abonnement :{" "}
+          {(Object.keys(TOKEN_PACKS) as PackId[]).map((id) => `${formatTokens(TOKEN_PACKS[id].tokens)} pour ${euros(TOKEN_PACKS[id].priceEur)}`).join(" ; ")}.
+        </li>
+      </ul>
+      <p>
+        Les tokens d&apos;abonnement sont rechargés chaque mois au quota du plan,
+        y compris sur l&apos;abonnement annuel : les tokens non utilisés ne sont pas
+        reportés. Les tokens achetés n&apos;expirent pas et sont conservés après la
+        fin d&apos;un abonnement. Les tokens d&apos;abonnement sont dépensés en premier.
+      </p>
       <h2>Photo et consentement</h2>
       <p>
         L&apos;utilisateur certifie être la personne représentée ou disposer de

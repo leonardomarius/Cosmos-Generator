@@ -26,11 +26,13 @@ import {
 } from "@/lib/chat-draft";
 import type { GenerationStatus } from "@/lib/fal";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
+import { SuspendedText } from "@/components/AccountNotices";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { ASPECT_LABELS, Picker } from "@/components/PromptStudio";
 import { useGeneration } from "@/components/useGeneration";
 
-export type ChatAccount = { email: string; balance: number };
+// suspendedContact : compte bloqué, l'adresse de contact à afficher.
+export type ChatAccount = { email: string; balance: number; suspendedContact?: string | null };
 
 // État d'une réponse : celui de useGeneration, figé quand la demande suivante
 // part (le hook ne suit qu'une génération à la fois).
@@ -446,6 +448,13 @@ function ComposerNote({
       </p>
     );
   }
+  if (account.suspendedContact) {
+    return (
+      <p className="px-3 pb-1 text-sm text-secondary">
+        <SuspendedText contact={account.suspendedContact} />
+      </p>
+    );
+  }
   return (
     <p className="px-3 pb-1 text-sm text-secondary">
       {costPrefix}
@@ -453,7 +462,7 @@ function ComposerNote({
       {!enoughTokens && (
         <>
           {" "}· pas assez.{" "}
-          <Link href="/abonnement" className="underline underline-offset-4">Voir les abonnements</Link>
+          <Link href="/abonnement" className="underline underline-offset-4">Recharger mes tokens</Link>
         </>
       )}
     </p>

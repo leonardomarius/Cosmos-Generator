@@ -133,7 +133,7 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
         {!enoughTokens && (
           <>
             {" "}· pas assez pour une vidéo.{" "}
-            <Link href="/abonnement" className="underline underline-offset-4">Voir les abonnements</Link>
+            <Link href="/abonnement" className="underline underline-offset-4">Recharger mes tokens</Link>
           </>
         )}
       </p>
