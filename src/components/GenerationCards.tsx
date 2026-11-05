@@ -67,7 +67,7 @@ export function GenerationCards() {
         </div>
         <CardBody
           title="Génération Historique"
-          text="Les grands moments de l'histoire européenne, filmés : Michel-Ange sculptant son David, et d'autres à venir."
+          text="Les grands moments de l'histoire européenne, filmés : Michel-Ange sculptant la personne de votre choix, et d'autres à venir."
           note="Scènes prêtes à l'emploi"
           icon={<path d="M4 20h16M6 20V10M10 20V10M14 20V10M18 20V10M3.5 10h17M12 3.5 20 8H4l8-4.5Z" />}
           action={
