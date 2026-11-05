@@ -122,11 +122,25 @@ async function saveSubscription(userId: string, fields: Record<string, unknown>)
   if (error) throw error;
 }
 
+// Un client créé avec une autre clé (test ou live) n'existe pas pour la clé active.
+async function customerExists(customerId: string): Promise<boolean> {
+  try {
+    await mollie("GET", `/customers/${customerId}`);
+    return true;
+  } catch (err) {
+    if (err instanceof MollieError && (err.status === 404 || err.status === 410)) return false;
+    throw err;
+  }
+}
+
 // Client Mollie de l'utilisateur, créé au premier abonnement. La clé
 // d'idempotence évite deux clients Mollie si l'utilisateur clique deux fois.
+// Sans mandat, aucun paiement n'a abouti : un client introuvable est remplacé.
 async function customerIdFor(user: User): Promise<string> {
   const existing = await subscriptionRow(user.id);
-  if (existing) return existing.mollie_customer_id;
+  if (existing && (existing.mollie_mandate_id || (await customerExists(existing.mollie_customer_id)))) {
+    return existing.mollie_customer_id;
+  }
 
   const customer = await mollie<{ id: string }>(
     "POST",
@@ -134,6 +148,10 @@ async function customerIdFor(user: User): Promise<string> {
     { email: user.email, metadata: { user_id: user.id } },
     `customer/${user.id}`,
   );
+  if (existing) {
+    await saveSubscription(user.id, { mollie_customer_id: customer.id });
+    return customer.id;
+  }
   const { error } = await adminClient()
     .from("subscriptions")
     .upsert({ user_id: user.id, mollie_customer_id: customer.id }, { onConflict: "user_id", ignoreDuplicates: true });
