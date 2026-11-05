@@ -1,4 +1,3 @@
-import Image from "next/image";
 import type { ReactNode } from "react";
 import { ChatLink } from "@/components/ChatLink";
 import { BeforeAfter } from "@/components/BeforeAfter";
@@ -52,15 +51,19 @@ export function GenerationCards() {
       {/* Pas encore de lien : les presets historiques ne sont pas prêts. */}
       <article className={HERO_CARD}>
         <div className={VISUAL}>
-          <Image
-            src="/exemples/michel-ange-david.webp"
-            alt="Michel-Ange sculptant la statue de David dans son atelier"
-            fill
-            sizes="(min-width: 768px) 50vw, 100vw"
-            unoptimized
-            loading="eager"
-            className="object-cover"
+          <video
+            src="/exemples/statue-sculpteur.mp4"
+            poster="/exemples/statue-sculpteur.jpg"
+            aria-label="Un sculpteur taille une statue de marbre dans un atelier de la Renaissance"
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="h-full w-full object-cover"
           />
+          <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">
+            Généré par Cosmos
+          </span>
         </div>
         <CardBody
           title="Génération Historique"
