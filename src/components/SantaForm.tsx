@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { ConfirmDialog, type Order } from "@/components/TokenShop";
 import { SANTA_EFFECT, SANTA_RULES, checkChildName, checkGifts, cleanText } from "@/config/effects";
 import { PROMPT_RULES, UPLOAD_RULES, formatTokens } from "@/config/product";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
@@ -12,13 +13,37 @@ type Result = { url: string; emailed: boolean };
 
 const GIFT_EXAMPLES = ["Un vélo rouge", "Une boîte de LEGO", "Un déguisement de pompier", "Un livre de dinosaures"];
 
+const PRICE = SANTA_EFFECT.priceEur.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+// Le webhook de Mollie peut arriver après le retour du client : on relit le
+// compte toutes les 3 s, pendant 30 s au plus. L'achat n'est pas reproposé
+// pendant ce temps : un client ne doit pas payer deux fois par impatience.
+const CONFIRM_POLL_MS = 3000;
+const CONFIRM_POLL_MAX = 10;
+
+const VIDEO_ORDER: Order = {
+  id: "video",
+  path: "/api/billing/video",
+  body: {},
+  title: SANTA_EFFECT.title,
+  price: PRICE,
+  detail: "Paiement en une fois, sans abonnement. Tu ajoutes ensuite la photo et la liste de cadeaux.",
+  confirmLabel: "Continuer vers le paiement",
+  hint: "Tu vas passer sur la page de paiement sécurisée de Mollie.",
+  waiverText: "Je demande la création immédiate de ma vidéo et je renonce à mon droit de rétractation de 14 jours pour ce contenu numérique.",
+};
+
 // Formulaire de l'effet "Vidéo du Père Noël" : prénom, photo du visage de
 // l'enfant et 1 à 4 cadeaux. La vidéo est assemblée tout de suite par le
 // serveur (pas de file d'attente) puis affichée ici et envoyée par email.
-// email : celui du compte ; balance : solde de tokens.
-export function SantaForm({ email, balance }: { email: string; balance: number }) {
+// Elle se paie à l'unité, avant de remplir le formulaire, ou en tokens.
+// email : celui du compte ; balance : solde de tokens ; purchases : vidéos
+// achetées à l'unité et pas encore créées.
+export function SantaForm({ email, balance, purchases }: { email: string; balance: number; purchases: number }) {
   const router = useRouter();
+  const returnedFromPayment = useSearchParams().get("achat") === "ok";
   const cost = SANTA_EFFECT.tokens;
+  const [buying, setBuying] = useState(false);
+  const [polls, setPolls] = useState(0);
   const [childName, setChildName] = useState("");
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [gifts, setGifts] = useState<string[]>([""]);
@@ -26,6 +51,18 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+
+  const paid = purchases > 0;
+  const waitingForPayment = returnedFromPayment && !paid && !result;
+
+  useEffect(() => {
+    if (!waitingForPayment || polls >= CONFIRM_POLL_MAX) return;
+    const timer = setTimeout(() => {
+      router.refresh();
+      setPolls((count) => count + 1);
+    }, CONFIRM_POLL_MS);
+    return () => clearTimeout(timer);
+  }, [waitingForPayment, polls, router]);
 
   async function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const input = e.target;
@@ -82,16 +119,62 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
       setError(data?.error ?? "La vidéo n'a pas pu être créée. Réessaie dans un instant.");
       return;
     }
+    // L'achat est utilisé : un rechargement de la page ne doit pas annoncer
+    // qu'un paiement est encore en attente.
+    window.history.replaceState(null, "", window.location.pathname);
     setResult({ url: data.url, emailed: data.emailNotification === true });
   }
 
   const enoughTokens = balance >= cost;
   const giftsFilled = gifts.every((g) => g.trim().length > 0);
-  const canGenerate = photo !== null && giftsFilled && consent && enoughTokens && !busy;
+  const canGenerate = photo !== null && giftsFilled && consent && (paid || enoughTokens) && !busy;
   const field =
     "w-full rounded-[20px] border border-foreground/15 bg-white/80 px-4 py-3 text-base placeholder:text-tertiary focus:border-foreground/40 focus:outline-none";
 
   return (
+    <>
+      {buying && <ConfirmDialog order={VIDEO_ORDER} onClose={() => setBuying(false)} />}
+
+      {waitingForPayment && (
+        <p aria-live="polite" className="liquid-glass mt-10 rounded-[24px] p-5 text-center text-secondary">
+          {polls < CONFIRM_POLL_MAX
+            ? "Paiement en cours de confirmation…"
+            : "Paiement pas encore confirmé. S'il a abouti, recharge cette page dans quelques minutes avant d'acheter à nouveau."}
+        </p>
+      )}
+      {returnedFromPayment && paid && (
+        <p aria-live="polite" className="liquid-glass mt-10 rounded-[24px] p-5 text-center font-semibold">
+          Paiement confirmé : ajoute la photo et la liste de cadeaux.
+        </p>
+      )}
+
+      {!paid && !result && !busy && !(waitingForPayment && polls < CONFIRM_POLL_MAX) && (
+        <div className="liquid-glass mt-10 rounded-[28px] p-5 sm:p-6">
+          <h2 className="text-xl font-semibold">Achat unique · {PRICE}</h2>
+          <p className="mt-2 text-secondary">
+            Une vidéo, sans abonnement ni tokens. Tu ajoutes la photo et la liste juste après le paiement.
+          </p>
+          <button
+            type="button"
+            onClick={() => setBuying(true)}
+            className="liquid-glass liquid-glass--interactive liquid-glass--accent mt-4 min-h-12 w-full rounded-full px-4 py-3 font-semibold"
+          >
+            Acheter la vidéo
+          </button>
+          <p className="mt-3 text-center text-sm text-secondary">
+            {enoughTokens ? (
+              <>Ou paie avec tes tokens dans le formulaire ci-dessous : {formatTokens(cost)}.</>
+            ) : (
+              <>
+                Ou en tokens : {formatTokens(cost)}, ton solde est de {formatTokens(balance)}.{" "}
+                <Link href="/abonnement" className="underline underline-offset-4">Recharger mes tokens</Link>
+              </>
+            )}
+          </p>
+        </div>
+      )}
+
+      {(paid || enoughTokens || busy || result) && (
     <form className="mt-10 space-y-6" onSubmit={onSubmit}>
       <label className="block space-y-2">
         <span className="text-sm text-secondary">Prénom de l&apos;enfant (recommandé)</span>
@@ -218,17 +301,19 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
       >
         {/* Sur mobile, le prix passe sous le libellé au lieu d'une coupure au hasard. */}
         Créer la vidéo du Père Noël<span className="max-sm:hidden"> · </span>
-        <span className="max-sm:block max-sm:text-sm max-sm:font-medium max-sm:opacity-85">{formatTokens(cost)}</span>
+        <span className="max-sm:block max-sm:text-sm max-sm:font-medium max-sm:opacity-85">{paid ? "déjà payée" : formatTokens(cost)}</span>
       </button>
-      <p className="text-center text-sm text-secondary">
-        Solde : <strong className="text-foreground">{formatTokens(balance)}</strong>
-        {!enoughTokens && (
-          <>
-            {" "}· pas assez pour cette vidéo.{" "}
-            <Link href="/abonnement" className="underline underline-offset-4">Recharger mes tokens</Link>
-          </>
-        )}
-      </p>
+      {!paid && (
+        <p className="text-center text-sm text-secondary">
+          Solde : <strong className="text-foreground">{formatTokens(balance)}</strong>
+          {!enoughTokens && (
+            <>
+              {" "}· pas assez pour cette vidéo.{" "}
+              <Link href="/abonnement" className="underline underline-offset-4">Recharger mes tokens</Link>
+            </>
+          )}
+        </p>
+      )}
 
       {busy && (
         <p className="text-center text-base text-secondary sm:text-sm">
@@ -253,5 +338,7 @@ export function SantaForm({ email, balance }: { email: string; balance: number }
         </div>
       )}
     </form>
+      )}
+    </>
   );
 }

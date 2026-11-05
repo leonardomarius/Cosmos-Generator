@@ -4,6 +4,7 @@ import { sendSantaVideoEmail } from "@/lib/email";
 import { renderSantaVideo, unsupportedCharacters } from "@/lib/santa-video";
 import { currentUser } from "@/lib/supabase";
 import { AccountBlockedError, InsufficientTokensError, reserveGeneration, settleGeneration } from "@/lib/tokens";
+import { claimVideoPurchase } from "@/lib/video-purchases";
 import { storeVideo } from "@/lib/video-storage";
 
 // Réencodage complet en 1080p : large marge, car une coupure par la plateforme
@@ -38,9 +39,10 @@ async function readOrder(form: FormData): Promise<SantaOrder | Invalid> {
 }
 
 // Vidéo du Père Noël : aucune IA ici, la photo et la liste sont collées sur
-// la vidéo de référence (src/lib/santa-video.ts). Le prix en tokens est
-// retiré avant l'assemblage et rendu s'il échoue. La photo n'est gardée que
-// le temps de l'assemblage ; la vidéo, PRODUCT.retentionDays jours.
+// la vidéo de référence (src/lib/santa-video.ts). Une vidéo achetée à l'unité
+// passe en premier ; sinon, le prix en tokens est retiré avant l'assemblage et
+// rendu s'il échoue. Un achat reste valable après un échec. La photo n'est
+// gardée que le temps de l'assemblage ; la vidéo, PRODUCT.retentionDays jours.
 export async function POST(request: Request) {
   const user = await currentUser();
   if (!user?.email) {
@@ -52,8 +54,11 @@ export async function POST(request: Request) {
   if ("error" in order) return Response.json(order, { status: 400 });
 
   let generationId: string;
+  let purchased = false;
   try {
-    generationId = await reserveGeneration(user.id, SANTA_EFFECT.id, SANTA_EFFECT.tokens);
+    const claimed = await claimVideoPurchase(user.id, SANTA_EFFECT.id);
+    purchased = claimed !== null;
+    generationId = claimed ?? (await reserveGeneration(user.id, SANTA_EFFECT.id, SANTA_EFFECT.tokens));
   } catch (err) {
     if (err instanceof AccountBlockedError) {
       return Response.json({ error: accountSuspendedMessage() }, { status: 403 });
@@ -77,7 +82,11 @@ export async function POST(request: Request) {
     console.error(err);
     await settleGeneration({ id: generationId }, "failed").catch(console.error);
     return Response.json(
-      { error: "La vidéo n'a pas pu être créée. Tes tokens t'ont été rendus : réessaie dans un instant." },
+      {
+        error: purchased
+          ? "La vidéo n'a pas pu être créée. Ton achat reste valable : réessaie dans un instant."
+          : "La vidéo n'a pas pu être créée. Tes tokens t'ont été rendus : réessaie dans un instant.",
+      },
       { status: 502 },
     );
   }

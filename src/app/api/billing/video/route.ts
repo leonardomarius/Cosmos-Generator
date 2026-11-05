@@ -1,0 +1,27 @@
+import { SANTA_EFFECT } from "@/config/effects";
+import { accountSuspendedMessage } from "@/config/product";
+import { createVideoPayment } from "@/lib/mollie";
+import { siteUrl } from "@/lib/site-url";
+import { currentUser } from "@/lib/supabase";
+import { getAccount } from "@/lib/tokens";
+
+// Ouvre la page de paiement Mollie pour acheter la vidéo du Père Noël à l'unité.
+// Le prix vient de la config, jamais de la requête du navigateur.
+export async function POST(request: Request) {
+  const user = await currentUser();
+  if (!user) return Response.json({ error: "Connecte-toi d'abord." }, { status: 401 });
+
+  const body = (await request.json().catch(() => null)) as { waiver?: unknown } | null;
+  try {
+    if ((await getAccount(user.id)).blocked) return Response.json({ error: accountSuspendedMessage() }, { status: 403 });
+    // Même renonciation que pour les tokens (art. L221-28 du Code de la consommation).
+    if (body?.waiver !== true) {
+      return Response.json({ error: "Coche la case d'accès immédiat pour continuer." }, { status: 400 });
+    }
+    const url = await createVideoPayment(user, SANTA_EFFECT, `${siteUrl(request)}/effets/${SANTA_EFFECT.slug}?achat=ok`);
+    return Response.json({ url });
+  } catch (err) {
+    console.error(err);
+    return Response.json({ error: "Paiement indisponible pour le moment." }, { status: 502 });
+  }
+}

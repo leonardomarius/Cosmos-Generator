@@ -8,14 +8,17 @@ import { getAccount, hasActiveSubscription } from "@/lib/tokens";
 // Un formulaire de génération n'apparaît qu'aux comptes connectés qui ont des
 // tokens (ou un abonnement en cours, pour voir leur solde même à 0).
 // next : page où revenir après la connexion ; what : ce que le client va créer.
+// tokensRequired : false si la page propose aussi un achat sans tokens.
 export async function AccountGate({
   next,
   what,
+  tokensRequired = true,
   children,
 }: {
   next: string;
   what: string;
-  children: (account: { email: string; balance: number }) => ReactNode;
+  tokensRequired?: boolean;
+  children: (account: { userId: string; email: string; balance: number }) => ReactNode;
 }) {
   const user = await currentUser();
   if (!user?.email) {
@@ -29,7 +32,7 @@ export async function AccountGate({
       </div>
     );
   }
-  if (!hasActiveSubscription(account) && account.balance === 0) {
+  if (tokensRequired && !hasActiveSubscription(account) && account.balance === 0) {
     return (
       <Gate
         text="Il te faut des tokens : avec un abonnement rechargé chaque mois, ou un achat unique sans expiration."
@@ -38,7 +41,7 @@ export async function AccountGate({
       />
     );
   }
-  return children({ email: user.email, balance: account.balance });
+  return children({ userId: user.id, email: user.email, balance: account.balance });
 }
 
 function Gate({ text, href, label }: { text: string; href: string; label: string }) {

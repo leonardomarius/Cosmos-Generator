@@ -17,6 +17,8 @@ export type Effect = {
   preview: { video: string; poster: string };
   // Prix fixe : aucune IA par commande, il ne dépend pas d'un coût fal.
   tokens: number;
+  // Achat à l'unité, sans abonnement ni tokens (src/lib/video-purchases.ts).
+  priceEur: number;
   seconds: number;
 };
 
@@ -28,8 +30,10 @@ export const SANTA_EFFECT = {
   pitch:
     "Le Père Noël découvre le visage de ton enfant et sa liste de cadeaux dans son cadre magique, puis lui fait un sourire complice. Une photo et la liste suffisent : la vidéo est prête tout de suite et envoyée par email.",
   preview: { video: "/effets/pere-noel-apercu.mp4", poster: "/effets/pere-noel-apercu.jpg" },
-  // ≈ 8,04 € avec l'abonnement Star (3 000 tokens pour 24,99 €).
-  tokens: 965,
+  // Proportionnel à la durée : 965 tokens pour 20 s, soit 1 302,75 pour 27 s,
+  // arrondi au palier de 5 supérieur. ≈ 10,87 € avec l'abonnement Star.
+  tokens: 1305,
+  priceEur: 9.99,
   seconds: 27,
 } as const satisfies Effect;
 

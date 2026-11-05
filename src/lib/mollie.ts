@@ -31,6 +31,7 @@ import {
   resetTokens,
   upgradeTokens,
 } from "@/lib/tokens";
+import { recordVideoPurchase } from "@/lib/video-purchases";
 
 const API = "https://api.mollie.com/v2";
 const MOLLIE_INTERVAL: Record<BillingInterval, string> = { month: "1 month", year: "12 months" };
@@ -51,6 +52,8 @@ type Metadata = {
   // Achat unique.
   pack?: string;
   tokens?: number;
+  // Achat d'une vidéo à l'unité.
+  effect?: string;
 } | null;
 
 type MolliePayment = {
@@ -196,7 +199,26 @@ export async function createPackPayment(user: User, pack: PackId, redirectUrl: s
   return checkoutUrl(payment);
 }
 
-const subscriptionDescription = (interval: BillingInterval, startDate: string) =>
+// Achat d'une vidéo à l'unité : paiement sans mandat ; le webhook ouvre le droit
+// à une vidéo, sans créditer de tokens.
+export async function createVideoPayment(
+  user: User,
+  effect: { id: string; title: string; priceEur: number },
+  redirectUrl: string,
+): Promise<string> {
+  const payment = await mollie<MolliePayment>("POST", "/payments", {
+    amount: euros(effect.priceEur),
+    description: `Cosmos Generator, ${effect.title}`,
+    sequenceType: "oneoff",
+    redirectUrl,
+    webhookUrl: webhookUrl(),
+    locale: "fr_FR",
+    metadata: { kind: "video", user_id: user.id, effect: effect.id, waiver_accepted_at: new Date().toISOString() },
+  });
+  return checkoutUrl(payment);
+}
+
+const subscriptionDescription =(interval: BillingInterval, startDate: string) =>
   `Cosmos Generator, abonnement ${INTERVAL_LABEL[interval]} du ${startDate}`;
 
 // Abonnement sur le mandat du client, premier prélèvement à "startDate".
@@ -361,6 +383,7 @@ export async function handlePaymentWebhook(paymentId: string): Promise<void> {
   if (payment.metadata?.kind === "first") return onFirstPayment(payment);
   if (payment.metadata?.kind === "upgrade") return onUpgradePayment(payment);
   if (payment.metadata?.kind === "pack") return onPackPayment(payment);
+  if (payment.metadata?.kind === "video") return onVideoPayment(payment);
 }
 
 // Rétrofacturation en cours : un montant rétrofacturé et au moins une
@@ -519,4 +542,15 @@ async function onPackPayment(payment: MolliePayment) {
   if (!credited) {
     console.error(`Paiement Mollie ${payment.id} confirmé sur le compte bloqué ${userId} : rien n'est crédité, à traiter à la main.`);
   }
+}
+
+// Vidéo à l'unité payée : le client peut remplir le formulaire.
+async function onVideoPayment(payment: MolliePayment) {
+  if (payment.status !== "paid") return;
+  const { user_id: userId, effect } = payment.metadata ?? {};
+  if (!userId || !effect) {
+    console.error(`Paiement de vidéo ${payment.id} incomplet`);
+    return;
+  }
+  await recordVideoPurchase(userId, effect, payment.id);
 }

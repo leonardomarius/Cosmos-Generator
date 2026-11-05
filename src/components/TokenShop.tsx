@@ -64,8 +64,8 @@ function planAction(viewer: ShopViewer | null, plan: PlanId, interval: BillingIn
 }
 
 // Ce que le client s'apprête à acheter, repris dans la fenêtre de confirmation.
-type Order = {
-  id: PlanId | PackId;
+export type Order = {
+  id: string;
   path: string;
   body: object;
   title: string;
@@ -75,6 +75,8 @@ type Order = {
   confirmLabel: string;
   // Sous le bouton, une fois la case cochée : ce qui se passe au clic.
   hint: string;
+  // Texte de la renonciation, si l'achat ne porte pas sur des tokens.
+  waiverText?: string;
 };
 
 const unit = (interval: BillingInterval) => (interval === "year" ? "an" : "mois");
@@ -256,7 +258,7 @@ export function TokenShop({ viewer, signedOut = false }: { viewer: ShopViewer | 
 // Dernière étape avant le paiement : le récapitulatif et la renonciation au
 // droit de rétractation (art. L221-28 du Code de la consommation), qui ne peut
 // pas figurer sur la page de paiement hébergée par Mollie. Décochée à chaque ouverture.
-function ConfirmDialog({ order, onClose }: { order: Order; onClose: () => void }) {
+export function ConfirmDialog({ order, onClose }: { order: Order; onClose: () => void }) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [waiver, setWaiver] = useState(false);
@@ -310,8 +312,8 @@ function ConfirmDialog({ order, onClose }: { order: Order; onClose: () => void }
             className="mt-1 h-5 w-5 shrink-0 accent-(--brand) sm:h-4 sm:w-4"
           />
           <span>
-            Je demande l&apos;accès immédiat à mes tokens, par abonnement ou par achat unique, et je renonce à mon droit
-            de rétractation de 14 jours pour ce contenu numérique.
+            {order.waiverText ??
+              "Je demande l'accès immédiat à mes tokens, par abonnement ou par achat unique, et je renonce à mon droit de rétractation de 14 jours pour ce contenu numérique."}
           </span>
         </label>
 

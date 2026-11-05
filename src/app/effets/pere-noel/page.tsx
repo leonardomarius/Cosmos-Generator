@@ -3,8 +3,16 @@ import { Suspense } from "react";
 import { AccountGate } from "@/components/AccountGate";
 import { SantaForm } from "@/components/SantaForm";
 import { SANTA_EFFECT } from "@/config/effects";
+import { availableVideoPurchases } from "@/lib/video-purchases";
 
 export const metadata: Metadata = { title: SANTA_EFFECT.title, description: SANTA_EFFECT.subtitle };
+
+const price = SANTA_EFFECT.priceEur.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+
+async function SantaOrder({ userId, email, balance }: { userId: string; email: string; balance: number }) {
+  const purchases = await availableVideoPurchases(userId, SANTA_EFFECT.id);
+  return <SantaForm email={email} balance={balance} purchases={purchases} />;
+}
 
 export default function SantaPage() {
   return (
@@ -17,9 +25,10 @@ export default function SantaPage() {
         complice. La vidéo est personnalisée avec la photo et la liste que tu
         donnes ici.
       </p>
+      <p className="mt-3 text-lg font-semibold">{price} à l&apos;unité, sans abonnement.</p>
       <Suspense fallback={<p className="mt-10 text-secondary">Chargement…</p>}>
-        <AccountGate next={`/effets/${SANTA_EFFECT.slug}`} what="la vidéo du Père Noël">
-          {({ email, balance }) => <SantaForm email={email} balance={balance} />}
+        <AccountGate next={`/effets/${SANTA_EFFECT.slug}`} what="la vidéo du Père Noël" tokensRequired={false}>
+          {(account) => <SantaOrder {...account} />}
         </AccountGate>
       </Suspense>
     </div>

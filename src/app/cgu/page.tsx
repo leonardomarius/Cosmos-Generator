@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { SANTA_EFFECT } from "@/config/effects";
 import { PLANS, PRODUCT, TOKEN_PACKS, formatTokens, type PackId, type PlanId } from "@/config/product";
 
 export const metadata: Metadata = { title: "Conditions générales" };
@@ -46,6 +47,11 @@ export default function CguPage() {
         y compris sur l&apos;abonnement annuel : les tokens non utilisés ne sont pas
         reportés. Les tokens achetés n&apos;expirent pas et sont conservés après la
         fin d&apos;un abonnement. Les tokens d&apos;abonnement sont dépensés en premier.
+      </p>
+      <p>
+        La vidéo du Père Noël s&apos;achète aussi à l&apos;unité, sans abonnement ni
+        tokens, pour {euros(SANTA_EFFECT.priceEur)}. Ce paiement donne droit à une
+        vidéo et ne crédite aucun token.
       </p>
       <h2>Photo et consentement</h2>
       <p>
