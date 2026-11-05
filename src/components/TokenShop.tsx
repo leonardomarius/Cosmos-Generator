@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { CancelButton } from "@/components/CancelButton";
 import {
   ANNUAL_FREE_MONTHS,
   PLANS,
@@ -154,8 +155,7 @@ export function TokenShop({ viewer, signedOut = false }: { viewer: ShopViewer | 
               <IntervalSwitch interval={interval} onChange={setInterval} />
             </div>
             <p className="mt-3 text-secondary">
-              Tes tokens sont rechargés chaque mois, sans report des tokens non utilisés. Résiliable à tout moment depuis
-              ton compte.
+              Tes tokens sont rechargés chaque mois, sans report des tokens non utilisés.
             </p>
           </div>
 
@@ -242,6 +242,11 @@ export function TokenShop({ viewer, signedOut = false }: { viewer: ShopViewer | 
             })}
           </ul>
           </div>
+          {viewer && !viewer.canceled && (
+            <div className="mt-1 px-5">
+              <CancelButton until={viewer.periodEnd} interval={viewer.interval} />
+            </div>
+          )}
         </section>
       </div>
     </div>

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { PaymentHelp, SuspendedNotice } from "@/components/AccountNotices";
-import { CancelButton } from "@/components/CancelButton";
 import { PLANS, formatTokens, planPriceEur, supportEmail } from "@/config/product";
 import { hasActiveSubscription, type Account } from "@/lib/tokens";
 
@@ -113,7 +112,6 @@ export function AccountView({
         <Link href="/abonnement" className={PRIMARY}>
           {!subscribed ? "Choisir un programme" : account.cancelAtPeriodEnd ? "Se réabonner" : "Boutique de tokens"}
         </Link>
-        {subscribed && !account.cancelAtPeriodEnd && <CancelButton until={periodEnd} interval={account.interval} />}
         <LogoutButton />
       </div>
 

@@ -21,9 +21,8 @@ export default function ShopPage() {
       </Suspense>
       <div className="mt-8 space-y-2 text-sm leading-relaxed text-secondary">
         <p>
-          Prix TTC. Paiement par carte bancaire, sécurisé par Mollie. L&apos;abonnement annuel est payé en une fois et se
-          renouvelle chaque année : tu reçois un email avant l&apos;échéance et tu peux le résilier depuis ton compte, sans
-          remboursement de l&apos;année en cours.
+          Prix TTC. Paiement par carte bancaire, sécurisé par Mollie. L&apos;abonnement annuel est payé en une fois, sans
+          remboursement de l&apos;année en cours, et se renouvelle chaque année : tu reçois un email avant l&apos;échéance.
         </p>
         <PaymentHelp contact={supportEmail()} />
       </div>

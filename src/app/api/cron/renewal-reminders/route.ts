@@ -1,5 +1,4 @@
 import { sendRenewalReminders } from "@/lib/renewal-reminders";
-import { siteUrl } from "@/lib/site-url";
 
 // Appelée chaque jour par Vercel Cron (vercel.json) : prévient les abonnés
 // annuels avant le renouvellement de leur abonnement.
@@ -11,7 +10,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "Non autorisé." }, { status: 401 });
   }
   try {
-    const result = await sendRenewalReminders(`${siteUrl(request)}/compte`);
+    const result = await sendRenewalReminders();
     return Response.json(result, { status: result.failed > 0 ? 500 : 200 });
   } catch (err) {
     console.error(err);

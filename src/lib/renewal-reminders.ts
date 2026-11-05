@@ -13,7 +13,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const formatDate = (date: Date) =>
   date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
-export async function sendRenewalReminders(accountUrl: string, now = new Date()) {
+export async function sendRenewalReminders(now = new Date()) {
   const db = adminClient();
   const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const { data: rows, error } = await db
@@ -47,7 +47,6 @@ export async function sendRenewalReminders(accountUrl: string, now = new Date())
         lastCancelDate: formatDate(new Date(+renewal - DAY_MS)),
         amountEur: planPriceEur(plan, interval),
         interval,
-        accountUrl,
         idempotencyKey: `renewal-reminder/${row.user_id}/${row.current_period_end}`,
       });
       const { error: saveError } = await db

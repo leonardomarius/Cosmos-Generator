@@ -16,7 +16,7 @@ async function sendEmail(params: {
   box?: string;
   // Après l'encadré et le lien.
   footer?: string;
-  link: { url: string; label: string };
+  link?: { url: string; label: string };
   idempotencyKey: string;
 }) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -27,8 +27,7 @@ async function sendEmail(params: {
   const text = [
     ...lines,
     ...(box ? ["", `>>> ${box} <<<`] : []),
-    "",
-    `${link.label} : ${link.url}`,
+    ...(link ? ["", `${link.label} : ${link.url}`] : []),
     ...(footer ? ["", footer] : []),
     "",
     `— ${PRODUCT.siteName}`,
@@ -36,7 +35,7 @@ async function sendEmail(params: {
   const html = [
     ...lines.map((line) => `<p>${escapeHtml(line)}</p>`),
     ...(box ? [`<p style="border:2px solid #3f5a96;border-radius:8px;padding:12px 16px;font-weight:600">${escapeHtml(box)}</p>`] : []),
-    `<p><a href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a></p>`,
+    ...(link ? [`<p><a href="${escapeHtml(link.url)}">${escapeHtml(link.label)}</a></p>`] : []),
     ...(footer ? [`<p>${escapeHtml(footer)}</p>`] : []),
     `<p>— ${escapeHtml(PRODUCT.siteName)}</p>`,
   ].join("\n");
@@ -106,7 +105,6 @@ export function sendRenewalReminderEmail(params: {
   lastCancelDate: string;
   amountEur: number;
   interval: BillingInterval;
-  accountUrl: string;
   idempotencyKey: string;
 }) {
   const amount = params.amountEur.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
@@ -116,10 +114,9 @@ export function sendRenewalReminderEmail(params: {
     lines: [
       "Bonjour,",
       `Ton abonnement ${params.planLabel} se renouvelle automatiquement le ${params.renewalDate}. Le montant prélevé ce jour-là sera de ${amount} TTC ${params.interval === "year" ? "pour une année" : "pour un mois"}.`,
-      "Si tu veux continuer, tu n'as rien à faire. Si tu préfères arrêter, tu peux résilier en un clic depuis ton compte : tes tokens achetés restent à toi.",
+      "Si tu veux continuer, tu n'as rien à faire.",
     ],
     box: `Date limite pour ne pas reconduire ton abonnement : ${params.lastCancelDate}.`,
-    link: { url: params.accountUrl, label: "Résilier ou gérer mon abonnement" },
     footer: process.env.SUPPORT_EMAIL ? `Une question ? Écris-nous à ${supportEmail()}.` : undefined,
     idempotencyKey: params.idempotencyKey,
   });

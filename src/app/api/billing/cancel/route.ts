@@ -1,7 +1,7 @@
 import { cancelSubscription } from "@/lib/mollie";
 import { currentUser } from "@/lib/supabase";
 
-// Résiliation en un clic depuis le compte (obligatoire en France depuis 2023).
+// Résiliation en un clic depuis la boutique (obligatoire en France depuis 2023).
 export async function POST() {
   const user = await currentUser();
   if (!user) return Response.json({ error: "Connecte-toi d'abord." }, { status: 401 });

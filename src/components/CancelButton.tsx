@@ -34,9 +34,9 @@ export function CancelButton({ until, interval }: { until: string | null; interv
         type="button"
         onClick={cancel}
         disabled={pending}
-        className="liquid-glass liquid-glass--interactive w-full rounded-full px-5 py-3 font-semibold disabled:opacity-60 sm:w-auto"
+        className="min-h-11 text-left text-sm text-secondary underline underline-offset-4 disabled:opacity-60"
       >
-        {pending ? "Résiliation…" : "Résilier"}
+        {pending ? "Résiliation…" : "Résilier mon abonnement"}
       </button>
       {error && <p className="text-base text-red-700 sm:text-sm">{error}</p>}
     </>
