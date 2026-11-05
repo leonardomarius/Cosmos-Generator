@@ -30,7 +30,7 @@ export const SANTA_EFFECT = {
   preview: { video: "/effets/pere-noel-apercu.mp4", poster: "/effets/pere-noel-apercu.jpg" },
   // ≈ 8,04 € avec l'abonnement Star (3 000 tokens pour 24,99 €).
   tokens: 965,
-  seconds: 20,
+  seconds: 32,
 } as const satisfies Effect;
 
 export const EFFECTS: readonly Effect[] = [SANTA_EFFECT];
@@ -55,6 +55,8 @@ export type SantaTemplate = {
   video: string;
   width: number;
   height: number;
+  // Images par seconde de la vidéo de référence.
+  fps: number;
   // Taille de la carte dessinée (photo + liste), aux proportions de l'écran.
   card: { width: number; height: number };
   // Apparition de la carte, en fondu (secondes).
@@ -67,24 +69,34 @@ export type SantaTemplate = {
   shots: { from: number; to: number; corners: [Point, Point, Point, Point]; cleanPlate?: string }[];
 };
 
-// Écran magique du plan par-dessus l'épaule, repris à l'envers pour la fin.
+// Écran magique du plan par-dessus l'épaule, repris après le gros plan.
 const SANTA_SCREEN: Pick<SantaTemplate["shots"][number], "corners" | "cleanPlate"> = {
-  corners: [[316, 247], [615, 252], [594, 735], [302, 714]],
-  cleanPlate: "src/assets/effects/pere-noel/ecran-vide-9x16.png",
+  corners: [[474, 370], [923, 378], [891, 1103], [453, 1071]],
+  cleanPlate: "src/assets/effects/pere-noel/ecran-vide-1080p.png",
 };
+// Le même écran en gros plan. Rien ne passe devant : pas de cleanPlate.
+const SANTA_CLOSE_UP_CORNERS: SantaTemplate["shots"][number]["corners"] = [[216, 412], [875, 424], [829, 1488], [185, 1442]];
 
-// Vidéo de référence validée le 2 novembre 2026 (20 s, 720p, 24 images/s) :
-// le QG, le gag des lutins, l'écran magique (9,04-13 s), le sourire du Père
-// Noël, puis retour sur l'écran (18-20 s).
+const SANTA_FPS = 30;
+// Début d'un plan, donné par sa première image. Tombe entre deux images pour
+// qu'un arrondi ne fasse jamais changer une image de plan.
+const cutAt = (frame: number) => (frame - 0.5) / SANTA_FPS;
+
+// Vidéo de référence validée le 5 novembre 2026 (32,18 s, 1080p, 30 images/s) :
+// le QG, le gag des lutins, l'écran magique (9,07-13 s), le sourire du Père
+// Noël, le gros plan sur l'écran (18-20 s), l'écran de dos (20-22,03 s), puis
+// le recul sur le QG et la fin au noir.
 export const SANTA_TEMPLATE: SantaTemplate = {
-  video: "src/assets/effects/pere-noel/reference-9x16.mp4",
-  width: 720,
-  height: 1280,
-  card: { width: 490, height: 775 },
+  video: "src/assets/effects/pere-noel/reference-1080p.mp4",
+  width: 1080,
+  height: 1920,
+  fps: SANTA_FPS,
+  card: { width: 735, height: 1163 },
   revealAt: 9.4,
   shots: [
-    { from: 217 / 24, to: 312 / 24, ...SANTA_SCREEN },
-    { from: 432 / 24, to: 480 / 24, ...SANTA_SCREEN },
+    { from: cutAt(272), to: cutAt(390), ...SANTA_SCREEN },
+    { from: cutAt(540), to: cutAt(600), corners: SANTA_CLOSE_UP_CORNERS },
+    { from: cutAt(600), to: cutAt(661), ...SANTA_SCREEN },
   ],
 };
 

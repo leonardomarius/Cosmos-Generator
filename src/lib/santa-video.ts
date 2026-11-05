@@ -110,7 +110,8 @@ function cardFilter(template: SantaTemplate, l: ReturnType<typeof layout>, giftC
       ...Array.from({ length: giftCount }, (_, i) => text(`gift-${i}.txt`, gifts.size, COLORS.gift, gifts.ys[i])),
       `format=rgba,${rounded}`,
       // Bordure transparente : la déformation en perspective étire les bords.
-      `pad=${width + 4}:${height + 4}:2:2:color=black@0`,
+      // Couleur du papier : en noir, le mélange laisserait un liseré sombre.
+      `pad=${width + 4}:${height + 4}:2:2:color=${COLORS.paper}@0`,
       `split=${template.shots.length}${template.shots.map((_, i) => `[card${i}]`).join("")}`,
     ].join(","),
   ].join(";");
@@ -141,33 +142,63 @@ function placeFilter(template: SantaTemplate, i: number): string {
 
 // Graphe ffmpeg de l'étape 2. Entrée 0 : la vidéo de référence ; ensuite la
 // carte de chaque plan (shot-<i>.png), puis les images "écran vide".
+// La vidéo est découpée aux bornes des plans, puis recollée : hors des plans,
+// rien n'est calculé, et une carte ne peut pas déborder sur un plan voisin
+// (l'option enable d'overlay, elle, s'évalue aussi sur l'image lue en avance).
 // Détourage par différence : les pixels qui diffèrent de l'écran vide sont
 // un objet devant l'écran ; ils sont recollés au-dessus de la carte.
 function compositeGraph(template: SantaTemplate): { inputs: string[]; graph: string; output: string } {
-  const { shots } = template;
-  const inputs = shots.flatMap((shot, i) => ["-loop", "1", "-t", String(shot.to), "-i", `shot-${i}.png`]);
+  const { shots, fps } = template;
+  const inputs = shots.flatMap((_, i) => ["-i", `shot-${i}.png`]);
   const withPlate = shots.flatMap((shot, i) => (shot.cleanPlate ? [i] : []));
-  for (const i of withPlate) inputs.push("-loop", "1", "-t", String(shots[i].to), "-i", fromRoot(shots[i].cleanPlate!));
+  for (const i of withPlate) inputs.push("-i", fromRoot(shots[i].cleanPlate!));
 
-  const parts = [`[0:v]split=${1 + withPlate.length}[base]${withPlate.map((i) => `[src${i}]`).join("")}`];
-  let previous = "base";
+  const segments: { from: number; to?: number; shot?: number }[] = [];
+  let cursor = 0;
   shots.forEach((shot, i) => {
-    const during = `enable='between(t,${shot.from},${shot.to})'`;
-    const reveal = template.revealAt > shot.from ? `,fade=in:st=${template.revealAt}:d=${REVEAL_SECONDS}:alpha=1` : "";
-    const at = isRectangle(shot.corners) ? boundingBox(shot.corners) : { x: 0, y: 0 };
-    parts.push(`[${i + 1}:v]format=rgba${reveal}[card${i}]`);
-    parts.push(`[${previous}][card${i}]overlay=x=${at.x}:y=${at.y}:${during}[carded${i}]`);
-    previous = `carded${i}`;
-    if (!shot.cleanPlate) return;
+    if (shot.from > cursor) segments.push({ from: cursor, to: shot.from });
+    segments.push({ from: shot.from, to: shot.to, shot: i });
+    cursor = shot.to;
+  });
+  segments.push({ from: cursor });
 
-    // Zone de l'écran, un peu élargie, où l'on cherche ce qui passe devant.
+  const parts = [`[0:v]split=${segments.length}${segments.map((_, n) => `[part${n}]`).join("")}`];
+  const clips = segments.map(({ from, to, shot: i }, n) => {
+    parts.push(`[part${n}]trim=start=${from}${to === undefined ? "" : `:end=${to}`},setpts=PTS-STARTPTS[clip${n}]`);
+    if (i === undefined) return `[clip${n}]`;
+
+    const shot = shots[i];
+    const reveal = template.revealAt > shot.from ? `,fade=in:st=${template.revealAt - shot.from}:d=${REVEAL_SECONDS}:alpha=1` : "";
     // Valeurs paires : la vidéo (4:2:0) ne se découpe qu'au pixel pair.
     const box = boundingBox(shot.corners);
-    const even = (n: number) => n - (n % 2);
-    const x = even(Math.max(0, box.x - 6));
-    const y = even(Math.max(0, box.y - 6));
-    const crop = `crop=${even(Math.min(template.width - x, box.w + 14))}:${even(Math.min(template.height - y, box.h + 14))}:${x}:${y}`;
+    const even = (v: number) => v - (v % 2);
+    const around = (margin: number, extra: number) => {
+      const x = even(Math.max(0, box.x - margin));
+      const y = even(Math.max(0, box.y - margin));
+      const w = even(Math.min(template.width - x, box.w + extra));
+      const h = even(Math.min(template.height - y, box.h + extra));
+      return { x, y, crop: `crop=${w}:${h}:${x}:${y}` };
+    };
+    // Carte déformée : image plein format presque vide, réduite à sa zone utile
+    // pour ne pas garder en mémoire des dizaines d'images de cette taille.
+    const cardArea = around(2, 6);
+    const shape = isRectangle(shot.corners) ? "" : `${cardArea.crop},`;
+    const at = isRectangle(shot.corners) ? box : cardArea;
+    // Image fixe : décodée une fois, puis répétée à la cadence de la vidéo,
+    // juste le temps du plan (une répétition sans fin ne s'arrêterait jamais).
+    const frames = Math.ceil((shot.to - shot.from) * fps) + 1;
+    parts.push(`[${i + 1}:v]${shape}format=yuva420p,loop=loop=${frames}:size=1,settb=1/${fps},setpts=N${reveal}[card${i}]`);
+    // shortest : le plan s'arrête avec sa vidéo, jamais avec la carte, plus longue.
+    if (!shot.cleanPlate) {
+      parts.push(`[clip${n}][card${i}]overlay=x=${at.x}:y=${at.y}:shortest=1[done${i}]`);
+      return `[done${i}]`;
+    }
+
+    // Zone de l'écran, un peu élargie, où l'on cherche ce qui passe devant.
+    const { x, y, crop } = around(6, 14);
     const plateInput = 1 + shots.length + withPlate.indexOf(i);
+    parts.push(`[clip${n}]split[base${i}][src${i}]`);
+    parts.push(`[base${i}][card${i}]overlay=x=${at.x}:y=${at.y}:shortest=1[carded${i}]`);
     parts.push(`[src${i}]${crop},format=rgb24,split[front${i}][compared${i}]`);
     parts.push(`[${plateInput}:v]${crop},format=rgb24[plate${i}]`);
     parts.push(
@@ -175,10 +206,11 @@ function compositeGraph(template: SantaTemplate): { inputs: string[]; graph: str
         `lut=y='if(gt(val,${MATTE_THRESHOLD}),255,0)',erosion,dilation,dilation,gblur=sigma=1.2[mask${i}]`,
     );
     parts.push(`[front${i}][mask${i}]alphamerge[ahead${i}]`);
-    parts.push(`[${previous}][ahead${i}]overlay=x=${x}:y=${y}:${during}[done${i}]`);
-    previous = `done${i}`;
+    parts.push(`[carded${i}][ahead${i}]overlay=x=${x}:y=${y}[done${i}]`);
+    return `[done${i}]`;
   });
-  return { inputs, graph: parts.join(";"), output: previous };
+  parts.push(`${clips.join("")}concat=n=${clips.length}:v=1:a=0[assembled]`);
+  return { inputs, graph: parts.join(";"), output: "assembled" };
 }
 
 async function ffmpeg(args: string[], cwd: string) {
