@@ -30,7 +30,7 @@ export const SANTA_EFFECT = {
   preview: { video: "/effets/pere-noel-apercu.mp4", poster: "/effets/pere-noel-apercu.jpg" },
   // ≈ 8,04 € avec l'abonnement Star (3 000 tokens pour 24,99 €).
   tokens: 965,
-  seconds: 32,
+  seconds: 27,
 } as const satisfies Effect;
 
 export const EFFECTS: readonly Effect[] = [SANTA_EFFECT];
@@ -82,10 +82,10 @@ const SANTA_FPS = 30;
 // qu'un arrondi ne fasse jamais changer une image de plan.
 const cutAt = (frame: number) => (frame - 0.5) / SANTA_FPS;
 
-// Vidéo de référence validée le 5 novembre 2026 (32,18 s, 1080p, 30 images/s) :
+// Vidéo de référence validée le 5 novembre 2026 (27 s, 1080p, 30 images/s) :
 // le QG, le gag des lutins, l'écran magique (9,07-13 s), le sourire du Père
 // Noël, le gros plan sur l'écran (18-20 s), l'écran de dos (20-22,03 s), puis
-// le recul sur le QG et la fin au noir.
+// le recul sur le QG. Coupée juste avant le noir de fin, son en fondu sur 1 s.
 export const SANTA_TEMPLATE: SantaTemplate = {
   video: "src/assets/effects/pere-noel/reference-1080p.mp4",
   width: 1080,

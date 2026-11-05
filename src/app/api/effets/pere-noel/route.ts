@@ -6,8 +6,9 @@ import { currentUser } from "@/lib/supabase";
 import { AccountBlockedError, InsufficientTokensError, reserveGeneration, settleGeneration } from "@/lib/tokens";
 import { storeVideo } from "@/lib/video-storage";
 
-// L'assemblage prend quelques secondes ; marge pour un serveur plus lent.
-export const maxDuration = 60;
+// Réencodage complet en 1080p : large marge, car une coupure par la plateforme
+// empêcherait de rendre les tokens au client.
+export const maxDuration = 300;
 
 type Invalid = { error: string };
 type SantaOrder = { childName: string | null; gifts: string[]; photo: File };
