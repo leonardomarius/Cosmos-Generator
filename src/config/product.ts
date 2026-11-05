@@ -151,7 +151,7 @@ export function formatTokens(n: number): string {
 export const PLANS = {
   essentiel: {
     label: "Essentiel",
-    priceEur: 1,
+    priceEur: 9.99,
     annualPriceEur: 99.9,
     monthlyTokens: 1000,
   },

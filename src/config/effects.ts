@@ -33,7 +33,8 @@ export const SANTA_EFFECT = {
   // Proportionnel à la durée : 965 tokens pour 20 s, soit 1 302,75 pour 27 s,
   // arrondi au palier de 5 supérieur. ≈ 10,87 € avec l'abonnement Star.
   tokens: 1305,
-  priceEur: 9.99,
+  // Temporaire, pour le test du paiement réel : à remettre à 9,99 € juste après.
+  priceEur: 1,
   seconds: 27,
 } as const satisfies Effect;
 
