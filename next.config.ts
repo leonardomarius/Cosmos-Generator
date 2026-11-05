@@ -12,11 +12,6 @@ const nextConfig: NextConfig = {
       "./src/assets/fonts/**/*",
       "./src/assets/effects/pere-noel/**/*",
     ],
-    // Assemblage des vidéos de presets (src/lib/presets/assemble.ts), là où une
-    // commande peut se terminer : webhook, suivi du navigateur, tâche quotidienne.
-    "/api/webhooks/presets": ["./node_modules/ffmpeg-static/ffmpeg*", "./presets/*/assets/**/*"],
-    "/api/presets/jobs/\\[id\\]": ["./node_modules/ffmpeg-static/ffmpeg*", "./presets/*/assets/**/*"],
-    "/api/cron/presets": ["./node_modules/ffmpeg-static/ffmpeg*", "./presets/*/assets/**/*"],
   },
   experimental: {
     agentUpgrade: "security",
