@@ -3,6 +3,7 @@
 import { fal } from "@fal-ai/client";
 import { MODELS, VIDEO_RESOLUTION, type AspectRatio, type ModelId, type VideoDuration } from "@/config/product";
 import referenceVideo from "@/config/reference-video.json";
+import { describeBody, type BodyMeasurements } from "@/lib/body-measurements";
 import { createNotificationToken } from "@/lib/notification-token";
 
 const QUEUE_URL = "https://queue.fal.run";
@@ -20,7 +21,7 @@ export type GenerationStatus =
 
 // Ce que le client demande, selon le service.
 export type GenerationRequest =
-  | { model: "kling4"; photos: Blob[] }
+  | { model: "kling4"; photos: Blob[]; measurements: BodyMeasurements }
   | { model: "image"; prompt: string; photos: Blob[]; aspectRatio: AspectRatio }
   | { model: "prompt"; prompt: string; duration: VideoDuration; aspectRatio: AspectRatio }
   | { model: "promptImages"; prompt: string; photos: Blob[]; duration: VideoDuration; aspectRatio: AspectRatio };
@@ -89,7 +90,7 @@ function falCall(req: GenerationRequest, imageUrls: string[]): { endpoint: strin
       return {
         endpoint: falModel,
         input: {
-          prompt,
+          prompt: [prompt, describeBody(req.measurements)].filter(Boolean).join(" "),
           video_url: referenceVideoUrl(),
           elements: [{ frontal_image_url: front, reference_image_urls: others.length > 0 ? others : [front] }],
           resolution: VIDEO_RESOLUTION,

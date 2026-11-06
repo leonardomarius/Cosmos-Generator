@@ -7,6 +7,7 @@ import {
   isVideoDuration,
   tokensFor,
 } from "@/config/product";
+import { readBodyMeasurements } from "@/lib/body-measurements";
 import { ContentRefusedError, startGeneration, type GenerationRequest } from "@/lib/fal";
 import { currentUser } from "@/lib/supabase";
 import { AccountBlockedError, InsufficientTokensError, markGenerationQueued, reserveGeneration, settleGeneration } from "@/lib/tokens";
@@ -38,7 +39,9 @@ function readRequest(form: FormData): GenerationRequest | Invalid {
     const photos = readPhotos(form, UPLOAD_RULES.maxPhotos);
     if ("error" in photos) return photos;
     if (photos.length === 0) return { error: "Photo manquante." };
-    return { model, photos };
+    const measurements = readBodyMeasurements((id) => form.get(id));
+    if ("error" in measurements) return measurements;
+    return { model, photos, measurements };
   }
 
   const prompt = String(form.get("prompt") ?? "").trim();

@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { UPLOAD_RULES, formatTokens, tokensFor } from "@/config/product";
+import { readBodyMeasurements } from "@/lib/body-measurements";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
 import { GenerationProgress } from "@/components/GenerationProgress";
+import { MeasurementsFields, type MeasurementValues } from "@/components/MeasurementsFields";
 import { useGeneration } from "@/components/useGeneration";
 
 type Photo = { file: File; preview: string };
@@ -15,6 +17,7 @@ type Photo = { file: File; preview: string };
 export function UploadForm({ email, balance }: { email: string; balance: number }) {
   const cost = tokensFor("kling4");
   const [photos, setPhotos] = useState<Photo[]>([]);
+  const [measurements, setMeasurements] = useState<MeasurementValues>({});
   const [consent, setConsent] = useState(false);
   const { start, error, setError, notifiedEmail, starting, generation, busy } = useGeneration(email);
 
@@ -50,9 +53,15 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (photos.length === 0) return;
+    const sizes = readBodyMeasurements((id) => measurements[id]);
+    if ("error" in sizes) {
+      setError(sizes.error);
+      return;
+    }
     // Réduites à 2048 px : assez pour garder les détails du visage sur une
     // photo en pied, et deux photos restent sous la limite de Vercel.
     const body = new FormData();
+    for (const [id, value] of Object.entries(sizes)) body.append(id, String(value));
     for (const [i, photo] of photos.entries()) {
       body.append("photos", new File([await shrinkPhoto(photo.file, 2048)], `photo-${i + 1}.jpg`, { type: "image/jpeg" }));
     }
@@ -101,6 +110,15 @@ export function UploadForm({ email, balance }: { email: string; balance: number 
           </label>
         )}
       </div>
+
+      <MeasurementsFields
+        values={measurements}
+        onChange={(id, value) => {
+          setError(null);
+          setMeasurements((current) => ({ ...current, [id]: value }));
+        }}
+        disabled={busy}
+      />
 
       {error && (
         <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-base text-red-700 sm:text-sm">{error}</p>

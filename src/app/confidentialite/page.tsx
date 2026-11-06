@@ -9,8 +9,9 @@ export default function PrivacyPage() {
     <LegalPage title="Politique de confidentialité">
       <h2>Données collectées</h2>
       <p>
-        Adresse email, photo envoyée, informations de commande. Les données de
-        carte bancaire sont traitées uniquement par Mollie.
+        Adresse email, photo envoyée, mensurations si elles sont renseignées,
+        informations de commande. Les données de carte bancaire sont traitées
+        uniquement par Mollie.
       </p>
       <h2>Finalité</h2>
       <p>
@@ -22,6 +23,11 @@ export default function PrivacyPage() {
         Les photos, images et vidéos sont supprimées automatiquement sous{" "}
         {PRODUCT.retentionDays} jours. Les données de facturation sont
         conservées selon les obligations légales.
+      </p>
+      <p>
+        Les mensurations, facultatives, ne sont pas enregistrées dans notre base
+        de données : elles sont transmises à fal.ai avec la demande de génération,
+        et peuvent rester jusqu&apos;à 90 jours dans l&apos;historique de ce service.
       </p>
       <p>
         Pour un achat à l&apos;unité de la vidéo du Père Noël, la photo reste dans
