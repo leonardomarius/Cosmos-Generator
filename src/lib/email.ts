@@ -70,7 +70,11 @@ export function sendResultReadyEmail(to: string, model: ModelId, url: string, re
     subject: image ? "Ton image est prête" : "Ta vidéo est prête",
     lines: [
       "Bonjour,",
-      model === "kling4" ? "Ta vidéo de star est prête." : image ? "Ton image est prête." : "Ta vidéo est prête.",
+      model === "kling4"
+        ? "Ta vidéo de star est prête."
+        : model === "statue"
+          ? "Ta vidéo de statue est prête."
+          : image ? "Ton image est prête." : "Ta vidéo est prête.",
       `Elle reste disponible pendant ${PRODUCT.retentionDays} jours : pense à la télécharger.`,
     ],
     link: { url, label: image ? "Voir et télécharger l'image" : "Voir et télécharger la vidéo" },
@@ -86,7 +90,7 @@ export function sendGenerationFailedEmail(to: string, model: ModelId, retryUrl: 
     lines: [
       "Bonjour,",
       `Désolé : la création de ${image ? "ton image" : "ta vidéo"} a échoué de notre côté. Tes tokens t'ont été rendus.`,
-      model === "kling4"
+      model === "kling4" || model === "statue"
         ? "Tu peux relancer une génération, avec d'autres photos si possible (visage net et bien éclairé)."
         : "Tu peux relancer une génération, en reformulant ta description si besoin.",
     ],

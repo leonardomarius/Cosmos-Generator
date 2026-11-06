@@ -3,6 +3,7 @@
 import { fal } from "@fal-ai/client";
 import { MODELS, VIDEO_RESOLUTION, type AspectRatio, type ModelId, type VideoDuration } from "@/config/product";
 import referenceVideo from "@/config/reference-video.json";
+import statueVideo from "@/config/statue-video.json";
 import { describeBody, type BodyMeasurements } from "@/lib/body-measurements";
 import { createNotificationToken } from "@/lib/notification-token";
 
@@ -22,6 +23,7 @@ export type GenerationStatus =
 // Ce que le client demande, selon le service.
 export type GenerationRequest =
   | { model: "kling4"; photos: Blob[]; measurements: BodyMeasurements }
+  | { model: "statue"; photos: Blob[] }
   | { model: "image"; prompt: string; photos: Blob[]; aspectRatio: AspectRatio }
   | { model: "prompt"; prompt: string; duration: VideoDuration; aspectRatio: AspectRatio }
   | { model: "promptImages"; prompt: string; photos: Blob[]; duration: VideoDuration; aspectRatio: AspectRatio };
@@ -79,6 +81,12 @@ function referenceVideoUrl(): string {
   return url;
 }
 
+function statueVideoUrl(): string {
+  const url = (statueVideo as ReferenceVideo).url;
+  if (!url) throw new Error("Vidéo de la statue non préparée : lance scripts/prepare-video.mjs avec FAL_KEY.");
+  return url;
+}
+
 // Modèle fal appelé et ses paramètres, une fois les images déposées chez fal.
 function falCall(req: GenerationRequest, imageUrls: string[]): { endpoint: string; input: object } {
   switch (req.model) {
@@ -93,6 +101,19 @@ function falCall(req: GenerationRequest, imageUrls: string[]): { endpoint: strin
           prompt: [prompt, describeBody(req.measurements)].filter(Boolean).join(" "),
           video_url: referenceVideoUrl(),
           elements: [{ frontal_image_url: front, reference_image_urls: others.length > 0 ? others : [front] }],
+          resolution: VIDEO_RESOLUTION,
+        },
+      };
+    }
+    case "statue": {
+      const { falModel, prompt } = MODELS.statue;
+      const [front, profile] = imageUrls;
+      return {
+        endpoint: falModel,
+        input: {
+          prompt,
+          video_url: statueVideoUrl(),
+          elements: [{ frontal_image_url: front, reference_image_urls: [profile] }],
           resolution: VIDEO_RESOLUTION,
         },
       };
@@ -138,6 +159,7 @@ export async function startGeneration(
 ): Promise<{ requestId: string; emailNotification: boolean }> {
   // Avant tout envoi : une configuration manquante ne doit pas consommer de crédits.
   if (req.model === "kling4") referenceVideoUrl();
+  if (req.model === "statue") statueVideoUrl();
   const notifyUrl = webhookUrl(email, req.model);
   fal.config({ credentials: falKey() });
   const photos = "photos" in req ? req.photos : [];

@@ -44,6 +44,13 @@ function readRequest(form: FormData): GenerationRequest | Invalid {
     return { model, photos, measurements };
   }
 
+  if (model === "statue") {
+    const photos = readPhotos(form, 2);
+    if ("error" in photos) return photos;
+    if (photos.length !== 2) return { error: "Il faut deux photos du visage : de face et de profil." };
+    return { model, photos };
+  }
+
   const prompt = String(form.get("prompt") ?? "").trim();
   if (!prompt) return { error: "Décris ce que tu veux générer." };
   if (prompt.length > PROMPT_RULES.maxLength) {

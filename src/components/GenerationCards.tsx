@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { ChatLink } from "@/components/ChatLink";
 import { BeforeAfter } from "@/components/BeforeAfter";
@@ -48,8 +49,7 @@ export function GenerationCards() {
         />
       </ChatLink>
 
-      {/* Pas encore de lien : les presets historiques ne sont pas prêts. */}
-      <article className={HERO_CARD}>
+      <Link href="/statue" className={`${HERO_CARD} liquid-glass--interactive`}>
         <div className={VISUAL}>
           <video
             src="/exemples/statue-sculpteur.mp4"
@@ -68,15 +68,11 @@ export function GenerationCards() {
         <CardBody
           title="Génération Historique"
           text="Les grands moments de l'histoire européenne, filmés : Michel-Ange sculptant la personne de votre choix, et d'autres à venir."
-          note="Scènes prêtes à l'emploi"
+          note={formatTokens(tokensFor("statue"))}
           icon={<path d="M4 20h16M6 20V10M10 20V10M14 20V10M18 20V10M3.5 10h17M12 3.5 20 8H4l8-4.5Z" />}
-          action={
-            <span className="inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-full bg-foreground/8 px-5 text-base font-semibold text-secondary">
-              Bientôt
-            </span>
-          }
+          action={<Cta>Créer ma statue</Cta>}
         />
-      </article>
+      </Link>
     </div>
   );
 }

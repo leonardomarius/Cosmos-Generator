@@ -10,14 +10,16 @@ export const PRODUCT = {
   referenceVideoPath: "/exemple.mp4",
 } as const;
 
-// Quatre services, chacun en un seul appel à fal.ai (les effets saisonniers,
+// Cinq services, chacun en un seul appel à fal.ai (les effets saisonniers,
 // sans IA à chaque commande, sont dans src/config/effects.ts) :
 // - image : prompt du client, avec ou sans images (Nano Banana 2.1) ;
 // - prompt : vidéo à partir du prompt seul (Kling 4.0) ;
 // - promptImages : vidéo à partir du prompt et d'images (Kling 4.0) ;
 // - kling4 : vidéo de référence, où la star est remplacée par la personne
 //   des photos, avec un prompt fixe (Kling 4.0). Son identifiant reste
-//   "kling4" : il est enregistré dans les générations déjà lancées.
+//   "kling4" : il est enregistré dans les générations déjà lancées ;
+// - statue : vidéo du sculpteur, où seul le visage de la statue prend celui
+//   de la personne des photos (Kling 4.0).
 
 // Star de la vidéo de référence, telle qu'on la voit à l'écran : la nommer
 // évite que le modèle remplace un garde du corps ou un fan. À mettre à jour
@@ -40,6 +42,20 @@ const REPLACE_PROMPT = [
   "Keep the same outfit: black jacket, white t-shirt, dark trousers and white sneakers.",
   "Keep the face clearly visible and recognizable, especially when the person walks toward the camera and smiles.",
   "Photorealistic, natural skin texture, sharp and detailed face with no warping.",
+].join(" ");
+
+// Prompt fixe de la statue : uniquement le visage. Le corps reste celui de la
+// vidéo, quelle que soit la personne : torse nu en gros plan, avec une main
+// posée dessus, il ne doit jamais prendre la morphologie d'une personne réelle.
+// Le matériau est nommé et répété : le risque est un visage de chair.
+const STATUE_PROMPT = [
+  "In @Video1, resculpt only the face of the large marble statue so that it has the likeness of @Element1.",
+  "@Element1 gives only the facial identity: its frontal image shows the face from the front, its reference image shows the same face in profile.",
+  "Change only the head of the statue: face shape, facial features, facial hair and hairstyle, all carved in stone.",
+  "The new face stays white Carrara marble in every frame, the same matte stone as the rest of the statue: blank sculpted eyes with no colored iris, no skin, no makeup, no real hair. It is an elegant Italian Renaissance sculpture in the style of Michelangelo.",
+  "Keep everything else exactly as in @Video1: the neck, torso, pose, proportions and rough unfinished stone of the statue, the sculptor, his hands and tools, the workshop, the light rays, the dust, every cut, the timing and the camera motion.",
+  "The statue never moves. The face stays sharp and recognizable from every angle, with no warping.",
+  "Ambient workshop sounds only, no voices or speech.",
 ].join(" ");
 
 // Prix en tokens : 1 token couvre au plus TOKEN_USD de coût fal, et chaque
@@ -94,6 +110,16 @@ export const MODELS = {
     // 0,094 $/s facturé sur l'entrée + la sortie : 0,188 $ par seconde produite.
     usdPerSecond: 0.188,
   },
+  // Photos du client : 1. le visage de face ; 2. le visage de profil.
+  statue: {
+    label: "Vidéo de statue",
+    kind: "video",
+    falModel: "kling/v4/video-to-video/edit",
+    prompt: STATUE_PROMPT,
+    // Même tarif que la vidéo de référence ; la vidéo du sculpteur dure 18,93 s.
+    usdPerSecond: 0.188,
+    seconds: 19,
+  },
 } as const;
 
 export type ModelId = keyof typeof MODELS;
@@ -119,11 +145,16 @@ export function isAspectRatio(value: unknown): value is AspectRatio {
 }
 
 // Coût fal d'une génération, en dollars. "seconds" : durée de la vidéo par
-// prompt (ignorée pour une image et pour la vidéo de référence).
+// prompt (ignorée pour une image et pour les vidéos de référence).
 export function costUsd(model: ModelId, seconds?: VideoDuration): number {
   const spec = MODELS[model];
   if (spec.kind === "image") return spec.usdPerImage;
-  const duration = model === "kling4" ? PRODUCT.videoDurationSeconds : (seconds ?? VIDEO_DURATIONS[0]);
+  const duration =
+    model === "statue"
+      ? MODELS.statue.seconds
+      : model === "kling4"
+        ? PRODUCT.videoDurationSeconds
+        : (seconds ?? VIDEO_DURATIONS[0]);
   return spec.usdPerSecond * duration;
 }
 

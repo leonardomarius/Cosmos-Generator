@@ -33,7 +33,7 @@ console.log(
 );
 const grid = [];
 for (const id of Object.keys(MODELS)) {
-  const durations = id === "image" || id === "kling4" ? [undefined] : VIDEO_DURATIONS;
+  const durations = id === "image" || id === "kling4" || id === "statue" ? [undefined] : VIDEO_DURATIONS;
   for (const seconds of durations) {
     grid.push({
       Service: MODELS[id].label + (seconds ? ` ${seconds} s` : ""),

@@ -46,8 +46,8 @@ export async function POST(request: Request) {
       await sendResultReadyEmail(email, model, result.url, requestId);
     } else {
       console.error(`Génération ${requestId} échouée : ${result.error}`);
-      // La vidéo de référence se relance depuis /creer, le reste depuis l'accueil.
-      const retryPath = model === "kling4" ? "/creer" : "/";
+      // Les vidéos de référence se relancent depuis leur page, le reste depuis l'accueil.
+      const retryPath = model === "kling4" ? "/creer" : model === "statue" ? "/statue" : "/";
       await sendGenerationFailedEmail(email, model, `${publicBaseUrl()}${retryPath}`, requestId);
     }
     return Response.json({ sent: true });
