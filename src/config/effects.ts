@@ -33,8 +33,7 @@ export const SANTA_EFFECT = {
   // Proportionnel à la durée : 965 tokens pour 20 s, soit 1 302,75 pour 27 s,
   // arrondi au palier de 5 supérieur. ≈ 10,87 € avec l'abonnement Star.
   tokens: 1305,
-  // Temporaire, pour le test du paiement réel : à remettre à 9,99 € juste après.
-  priceEur: 1,
+  priceEur: 9.99,
   seconds: 27,
 } as const satisfies Effect;
 
@@ -108,7 +107,7 @@ export const SANTA_TEMPLATE: SantaTemplate = {
 // Prénom : lettres, espaces, tirets et apostrophes.
 const NAME_PATTERN = /^[\p{L}][\p{L}\p{M} '’-]*$/u;
 // Cadeau : lettres, chiffres et ponctuation simple. La police de la carte est
-// vérifiée à part (unsupportedCharacters dans src/lib/santa-video.ts).
+// vérifiée à part (checkSantaTexts dans src/lib/santa-text.ts).
 const GIFT_PATTERN = /^[\p{L}\p{M}\p{N} '’"«».,!?&+:()/-]+$/u;
 
 // Espaces multiples réduits, comme le texte sera affiché.

@@ -11,15 +11,15 @@ import path from "node:path";
 import { promisify } from "node:util";
 import ffmpegPath from "ffmpeg-static";
 import type { SantaTemplate } from "@/config/effects";
-import { missingCharacters, readFontMetrics, textWidth, type FontMetrics } from "@/lib/font-metrics";
+import { textWidth, type FontMetrics } from "@/lib/font-metrics";
+import { FONT_FILE, cardTitle, loadFont } from "@/lib/santa-text";
 
 const run = promisify(execFile);
 
-// Fichiers du projet (police, vidéo de référence…), quel que soit le dossier
-// où tourne ffmpeg. Ils sont inclus dans le déploiement par next.config.ts :
-// sans le commentaire turbopackIgnore, Next embarquerait tout le projet.
+// Fichiers du projet (vidéo de référence…), quel que soit le dossier où tourne
+// ffmpeg. Ils sont inclus dans le déploiement par next.config.ts : sans le
+// commentaire turbopackIgnore, Next embarquerait tout le projet.
 const fromRoot = (file: string) => path.resolve(/*turbopackIgnore: true*/ process.cwd(), file);
-const FONT_FILE = fromRoot("src/assets/fonts/DancingScript.ttf");
 
 // Couleurs de la carte : papier crème, fond doré derrière la photo.
 const COLORS = {
@@ -35,21 +35,6 @@ const REVEAL_SECONDS = 0.6;
 const MATTE_THRESHOLD = 16;
 
 export type SantaCard = { photo: Buffer; childName: string | null; gifts: string[] };
-
-let font: FontMetrics | null = null;
-async function loadFont(): Promise<FontMetrics> {
-  font ??= readFontMetrics(await readFile(FONT_FILE));
-  return font;
-}
-
-function cardTitle(childName: string | null): string {
-  return childName ? `Liste de Noël de ${childName}` : "Ma liste de Noël";
-}
-
-// Caractères du prénom ou des cadeaux que la police ne sait pas dessiner.
-export async function unsupportedCharacters(childName: string | null, gifts: string[]): Promise<string[]> {
-  return missingCharacters(await loadFont(), [cardTitle(childName), ...gifts].join(" "));
-}
 
 // Plus grande taille (en pixels) qui fait tenir chaque texte dans maxWidth.
 function fitSize(metrics: FontMetrics, texts: string[], maxWidth: number, maxSize: number): number {

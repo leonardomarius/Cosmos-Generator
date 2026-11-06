@@ -1,7 +1,8 @@
-import { SANTA_EFFECT, SANTA_RULES, SANTA_TEMPLATE, checkChildName, checkGifts, cleanText } from "@/config/effects";
+import { SANTA_EFFECT, SANTA_RULES, SANTA_TEMPLATE, cleanText } from "@/config/effects";
 import { UPLOAD_RULES, accountSuspendedMessage } from "@/config/product";
 import { sendSantaVideoEmail } from "@/lib/email";
-import { renderSantaVideo, unsupportedCharacters } from "@/lib/santa-video";
+import { checkSantaTexts } from "@/lib/santa-text";
+import { renderSantaVideo } from "@/lib/santa-video";
 import { currentUser } from "@/lib/supabase";
 import { AccountBlockedError, InsufficientTokensError, reserveGeneration, settleGeneration } from "@/lib/tokens";
 import { claimVideoPurchase } from "@/lib/video-purchases";
@@ -18,13 +19,9 @@ type SantaOrder = { childName: string | null; gifts: string[]; photo: File };
 // jamais confiance.
 async function readOrder(form: FormData): Promise<SantaOrder | Invalid> {
   const childName = cleanText(String(form.get("childName") ?? ""));
-  const nameError = checkChildName(childName);
-  if (nameError) return { error: nameError };
   const gifts = form.getAll("gifts").map((gift) => cleanText(String(gift)));
-  const giftsError = checkGifts(gifts);
-  if (giftsError) return { error: giftsError };
-  const missing = await unsupportedCharacters(childName || null, gifts);
-  if (missing.length > 0) return { error: `Caractère non pris en charge : ${missing.join(" ")}` };
+  const textError = await checkSantaTexts(childName, gifts);
+  if (textError) return { error: textError };
 
   const photos = form.getAll("photos");
   if (photos.length === 0) return { error: "Ajoute une photo du visage de ton enfant." };

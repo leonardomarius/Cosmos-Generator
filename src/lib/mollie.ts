@@ -544,7 +544,7 @@ async function onPackPayment(payment: MolliePayment) {
   }
 }
 
-// Vidéo à l'unité payée : le client peut remplir le formulaire.
+// Vidéo à l'unité payée : le client a droit à la création de sa vidéo.
 async function onVideoPayment(payment: MolliePayment) {
   if (payment.status !== "paid") return;
   const { user_id: userId, effect } = payment.metadata ?? {};

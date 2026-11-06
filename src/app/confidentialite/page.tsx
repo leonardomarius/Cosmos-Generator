@@ -23,6 +23,12 @@ export default function PrivacyPage() {
         {PRODUCT.retentionDays} jours. Les données de facturation sont
         conservées selon les obligations légales.
       </p>
+      <p>
+        Pour un achat à l&apos;unité de la vidéo du Père Noël, la photo reste dans
+        le navigateur du client pendant le paiement et n&apos;est envoyée
+        qu&apos;une fois celui-ci confirmé. Elle y est effacée dès que la vidéo est
+        créée ou, si le paiement est abandonné, à la première visite après 24 heures.
+      </p>
       <h2>Sous-traitants</h2>
       <p>
         Supabase (données), Mollie (paiement), fal.ai (génération d&apos;images et de vidéos),

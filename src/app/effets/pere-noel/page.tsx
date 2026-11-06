@@ -23,6 +23,18 @@ export default function SantaPage() {
         visage de ton enfant et sa liste de cadeaux, puis lui sourit.
       </p>
       <p className="mt-3 text-lg font-semibold">{price} à l&apos;unité, sans abonnement.</p>
+      <div className="relative mx-auto mt-8 aspect-[9/16] w-full max-w-[min(20rem,calc(85dvh*9/16))] overflow-hidden rounded-[24px] bg-foreground/8">
+        <video
+          src={SANTA_EFFECT.preview.video}
+          poster={SANTA_EFFECT.preview.poster}
+          aria-label="Extrait d'une vidéo du Père Noël"
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="h-full w-full object-cover"
+        />
+      </div>
       <Suspense fallback={<p className="mt-10 text-secondary">Chargement…</p>}>
         <AccountGate next={`/effets/${SANTA_EFFECT.slug}`} what="la vidéo du Père Noël" tokensRequired={false}>
           {(account) => <SantaOrder {...account} />}
