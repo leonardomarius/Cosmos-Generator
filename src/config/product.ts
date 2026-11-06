@@ -58,9 +58,11 @@ const STATUE_PROMPT = [
   "Ambient workshop sounds only, no voices or speech.",
 ].join(" ");
 
-// Prix en tokens : 1 token couvre au plus TOKEN_USD de coût fal, et chaque
-// prix est arrondi aux 5 tokens supérieurs (605 tokens pour une vidéo de
-// 10 s). Marges par offre et par taux d'utilisation : scripts/economics.mjs.
+// Prix en tokens : 1 token couvre au plus TOKEN_USD de coût fal (la statue, la
+// plus coûteuse, est à ce plafond), et chaque prix est arrondi aux 5 tokens
+// supérieurs. Les autres prix sont calés sur l'Essentiel : 2 vidéos par mois,
+// soit 1 375 tokens pour 10 s, les autres durées et l'image en proportion.
+// Marges par offre et par taux d'utilisation : scripts/economics.mjs.
 export const TOKEN_USD = 0.0026;
 export const PRICE_STEP_TOKENS = 5;
 
@@ -80,8 +82,7 @@ export const MODELS = {
     // fal n'affiche pas son prix : 0,0336 $ chez Google en 1K, plus la marge
     // habituelle de fal. À confirmer sur la première facture.
     usdPerImage: 0.04,
-    // Prix fixé au-dessus de la règle (20 tokens).
-    tokens: 25,
+    tokens: 60,
   },
   prompt: {
     label: "Vidéo",
@@ -107,6 +108,7 @@ export const MODELS = {
     prompt: REPLACE_PROMPT,
     // 0,094 $/s facturé sur l'entrée + la sortie : 0,188 $ par seconde produite.
     usdPerSecond: 0.188,
+    tokens: 1375,
   },
   // Photos du client : 1. le visage de face ; 2. le visage de profil.
   statue: {
@@ -156,10 +158,13 @@ export function costUsd(model: ModelId, seconds?: VideoDuration): number {
   return spec.usdPerSecond * duration;
 }
 
-// Prix pour le client, en tokens : fixé dans MODELS s'il y est, sinon déduit
+const PROMPT_VIDEO_TOKENS: Record<VideoDuration, number> = { 5: 695, 10: 1375, 15: 2070, 20: 2750 };
+
+// Prix pour le client, en tokens : fixé ci-dessus ou dans MODELS, sinon déduit
 // du coût fal (le petit epsilon évite qu'une erreur d'arrondi des flottants
 // ajoute 5 tokens).
 export function tokensFor(model: ModelId, seconds?: VideoDuration): number {
+  if (model === "prompt" || model === "promptImages") return PROMPT_VIDEO_TOKENS[seconds ?? VIDEO_DURATIONS[0]];
   const spec = MODELS[model];
   if ("tokens" in spec) return spec.tokens;
   const steps = Math.ceil(costUsd(model, seconds) / (TOKEN_USD * PRICE_STEP_TOKENS) - 1e-9);

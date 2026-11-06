@@ -31,7 +31,7 @@ export const SANTA_EFFECT = {
     "Le Père Noël découvre le visage de ton enfant et sa liste de cadeaux dans son cadre magique, puis lui fait un sourire complice. Une photo et la liste suffisent : la vidéo est prête tout de suite et envoyée par email.",
   preview: { video: "/effets/pere-noel-apercu.mp4", poster: "/effets/pere-noel-apercu.jpg" },
   // Proportionnel à la durée : 965 tokens pour 20 s, soit 1 302,75 pour 27 s,
-  // arrondi au palier de 5 supérieur. ≈ 10,87 € avec l'abonnement Star.
+  // arrondi au palier de 5 supérieur. ≈ 6,09 € avec l'abonnement Star.
   tokens: 1305,
   priceEur: 9.99,
   seconds: 27,

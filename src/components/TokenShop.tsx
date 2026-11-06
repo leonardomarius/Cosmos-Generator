@@ -38,6 +38,8 @@ const euros = (n: number) => n.toLocaleString("fr-FR", { style: "currency", curr
 function capacity(tokens: number): string {
   const videos = Math.floor(tokens / VIDEO_TOKENS);
   const images = Math.floor(tokens / IMAGE_TOKENS);
+  // Le plus petit pack ne couvre pas une vidéo de 10 s.
+  if (videos === 0) return `jusqu'à ${images} image${images > 1 ? "s" : ""}`;
   return `jusqu'à ${videos} vidéo${videos > 1 ? "s" : ""} de 10 s ou ${images} image${images > 1 ? "s" : ""}`;
 }
 
