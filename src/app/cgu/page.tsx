@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
 import { SANTA_EFFECT } from "@/config/effects";
-import { PLANS, PRODUCT, TOKEN_PACKS, formatTokens, type PackId, type PlanId } from "@/config/product";
+import { MODELS, PLANS, PRODUCT, TOKEN_PACKS, formatTokens, type PackId, type PlanId } from "@/config/product";
 
 export const metadata: Metadata = { title: "Conditions générales" };
 
@@ -16,10 +16,12 @@ export default function CguPage() {
         {PRODUCT.siteName} génère, par intelligence artificielle, des images et
         des vidéos à partir d&apos;une description et, si l&apos;utilisateur le
         souhaite, d&apos;images qu&apos;il fournit. Il propose aussi des vidéos de
-        référence de {PRODUCT.videoDurationSeconds} secondes, au scénario fixe,
-        où la personne d&apos;une ou deux photos fournies par l&apos;utilisateur
-        remplace le personnage principal, et des effets de saison au scénario
-        fixe, comme la vidéo du Père Noël.
+        référence au scénario fixe : l&apos;une de {PRODUCT.videoDurationSeconds}{" "}
+        secondes, où la personne d&apos;une ou deux photos fournies par
+        l&apos;utilisateur remplace le personnage principal, l&apos;autre de{" "}
+        {MODELS.statue.seconds} secondes, où une statue prend le visage de deux
+        photos fournies par l&apos;utilisateur. S&apos;y ajoutent des effets de
+        saison au scénario fixe, comme la vidéo du Père Noël.
       </p>
       <h2>Prix</h2>
       <p>

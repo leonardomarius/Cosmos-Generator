@@ -177,7 +177,7 @@ export function TokenShop({ viewer, signedOut = false }: { viewer: ShopViewer | 
                     {interval === "year" && `soit ${euros(annualPricePerMonthEur(id))} / mois`}
                   </p>
                   <p className="mt-3 text-secondary">
-                    <strong className="font-semibold text-foreground">{formatTokens(plan.monthlyTokens)} par mois</strong> :{" "}
+                    <strong className="font-semibold text-foreground">{formatTokens(plan.monthlyTokens)} par mois</strong>&nbsp;:{" "}
                     {capacity(plan.monthlyTokens)}
                   </p>
                   {/* La note au-dessus du bouton : les boutons restent alignés d'une carte à l'autre. */}

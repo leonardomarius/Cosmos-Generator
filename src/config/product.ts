@@ -60,9 +60,7 @@ const STATUE_PROMPT = [
 
 // Prix en tokens : 1 token couvre au plus TOKEN_USD de coût fal, et chaque
 // prix est arrondi aux 5 tokens supérieurs (605 tokens pour une vidéo de
-// 10 s). 100 tokens du plan le moins cher au token (Réalisateur) rapportent
-// ≈ 0,58 € net de TVA et de frais : la marge reste d'environ 60 % au moins,
-// même si tout le quota est utilisé (calcul dans scripts/economics.mjs).
+// 10 s). Marges par offre et par taux d'utilisation : scripts/economics.mjs.
 export const TOKEN_USD = 0.0026;
 export const PRICE_STEP_TOKENS = 5;
 
@@ -177,26 +175,26 @@ export function formatTokens(n: number): string {
 // chaque mois (y compris sur l'annuel, payé en une fois) : les tokens non
 // utilisés ne sont pas reportés.
 // "priceEur" et "annualPriceEur" sont les montants TTC prélevés par Mollie.
-// Marge visée : au moins 50 % du HT même si tout le quota est utilisé
-// (calcul dans scripts/economics.mjs).
+// L'Essentiel couvre 2 vidéos par mois, au choix : 10 s ou vidéos de référence,
+// statue comprise (2 × 1 375 tokens). Marges : scripts/economics.mjs.
 export const PLANS = {
   essentiel: {
     label: "Essentiel",
-    priceEur: 9.99,
-    annualPriceEur: 99.9,
-    monthlyTokens: 1000,
+    priceEur: 12.99,
+    annualPriceEur: 129.9,
+    monthlyTokens: 2750,
   },
   star: {
     label: "Star",
-    priceEur: 24.99,
-    annualPriceEur: 249.9,
-    monthlyTokens: 3000,
+    priceEur: 34.99,
+    annualPriceEur: 349.9,
+    monthlyTokens: 7500,
   },
   producteur: {
     label: "Réalisateur",
-    priceEur: 49.99,
-    annualPriceEur: 499.9,
-    monthlyTokens: 7000,
+    priceEur: 69.99,
+    annualPriceEur: 699.9,
+    monthlyTokens: 16000,
   },
 } as const;
 
@@ -216,14 +214,14 @@ export function planPriceEur(plan: PlanId, interval: BillingInterval): number {
   return interval === "year" ? PLANS[plan].annualPriceEur : PLANS[plan].priceEur;
 }
 
-// Prix annuel ramené au mois, arrondi au centime (99,90 € : 8,33 €).
+// Prix annuel ramené au mois, arrondi au centime (129,90 € : 10,83 €).
 export function annualPricePerMonthEur(plan: PlanId): number {
   return Math.round(Math.round(PLANS[plan].annualPriceEur * 100) / 12) / 100;
 }
 
 // Packs en achat unique : jamais expirés, toujours plus chers au token que
 // n'importe quel abonnement (vérifié par scripts/economics.mjs).
-// "plan" : l'abonnement au même nombre de tokens, pour la comparaison affichée.
+// "plan" : l'abonnement comparé dans la boutique, qui donne plus de tokens.
 export const TOKEN_PACKS = {
   pack1000: { tokens: 1000, priceEur: 14.99, plan: "essentiel" },
   pack3000: { tokens: 3000, priceEur: 37.99, plan: "star" },

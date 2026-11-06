@@ -20,7 +20,7 @@ const VAT = 0.2; // TVA française ; l'OSS applique celle du pays du client dans
 const paymentFees = (ttc) => ttc * 0.018 + 0.25; // carte UE chez Mollie (tarif standard, à vérifier)
 const FIXED_EUR_PER_MONTH = 20 * EUR_PER_USD + 25 * EUR_PER_USD + 20; // Vercel Pro, Supabase Pro, divers
 const USAGE_RATES = [0.25, 0.5, 0.75, 1]; // part du quota réellement utilisée
-const MIN_MARGIN = 0.5; // sur le HT, quota utilisé à 100 %
+const MIN_MARGIN = 0.2; // sur le HT, quota utilisé à 100 % : plancher de la grille du 2026-11-06
 
 const eur = (n) => `${n.toFixed(2)} €`;
 const usd = (n) => `${n.toFixed(2)} $`;
