@@ -1,5 +1,6 @@
 import { EFFECTS } from "@/config/effects";
 import { purgeOldVideos } from "@/lib/video-storage";
+import { WANGP_FOLDERS } from "@/lib/wangp";
 
 // Appelée chaque jour par Vercel Cron (vercel.json) : supprime les vidéos des
 // effets après PRODUCT.retentionDays jours, comme promis aux clients.
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
     return Response.json({ error: "Non autorisé." }, { status: 401 });
   }
   try {
-    const removed = await purgeOldVideos(EFFECTS.map((item) => item.slug));
+    const removed = await purgeOldVideos([...EFFECTS.map((item) => item.slug), ...WANGP_FOLDERS]);
     return Response.json({ removed });
   } catch (err) {
     console.error(err);

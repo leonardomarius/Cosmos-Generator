@@ -1,5 +1,6 @@
 import { isModelId } from "@/config/product";
 import { FAL_REQUEST_ID, getGenerationStatus } from "@/lib/fal";
+import { getWangpStatus } from "@/lib/wangp";
 
 export async function GET(request: Request, ctx: RouteContext<"/api/generations/[id]">) {
   const { id } = await ctx.params;
@@ -8,7 +9,9 @@ export async function GET(request: Request, ctx: RouteContext<"/api/generations/
     return Response.json({ error: "Identifiant invalide." }, { status: 400 });
   }
   try {
-    return Response.json(await getGenerationStatus(model, id));
+    // Tâche rendue sur le PC (WanGP) : suivie dans Supabase, pas chez fal.
+    const local = await getWangpStatus(id);
+    return Response.json(local ?? (await getGenerationStatus(model, id)));
   } catch (err) {
     console.error(err);
     return Response.json({ error: "Statut indisponible." }, { status: 502 });

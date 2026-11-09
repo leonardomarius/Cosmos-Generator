@@ -100,6 +100,40 @@ export type Database = {
           created_at?: string;
         }
       >;
+      wangp_jobs: Table<
+        {
+          id: string;
+          model: string;
+          email: string;
+          prompt: string;
+          duration: number | null;
+          aspect_ratio: string | null;
+          options: Json;
+          photos: string[];
+          status: string;
+          result_path: string | null;
+          error: string | null;
+          created_at: string;
+          claimed_at: string | null;
+          finished_at: string | null;
+        },
+        {
+          id: string;
+          model: string;
+          email: string;
+          prompt?: string;
+          duration?: number | null;
+          aspect_ratio?: string | null;
+          options?: Json;
+          photos?: string[];
+          status?: string;
+          result_path?: string | null;
+          error?: string | null;
+          created_at?: string;
+          claimed_at?: string | null;
+          finished_at?: string | null;
+        }
+      >;
     };
     Views: Record<never, never>;
     Functions: {

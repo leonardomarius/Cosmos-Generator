@@ -11,6 +11,7 @@ import { readBodyMeasurements } from "@/lib/body-measurements";
 import { ContentRefusedError, startGeneration, type GenerationRequest } from "@/lib/fal";
 import { currentUser } from "@/lib/supabase";
 import { AccountBlockedError, InsufficientTokensError, markGenerationQueued, reserveGeneration, settleGeneration } from "@/lib/tokens";
+import { handledByWangp, startWangpGeneration } from "@/lib/wangp";
 
 type Invalid = { error: string };
 
@@ -107,7 +108,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const started = await startGeneration(req, user.email);
+    // Toutes les générations passent par le PC (WanGP) quand le pont est configuré.
+    const started = handledByWangp()
+      ? await startWangpGeneration(req, user.email, generationId)
+      : await startGeneration(req, user.email);
     await markGenerationQueued(generationId, started.requestId).catch((err) => {
       // La génération est lancée : la requête réussit quand même, mais sans ce
       // lien un échec ultérieur ne pourra pas rendre les tokens.

@@ -9,13 +9,32 @@ export const BODY_MEASUREMENTS = [
   { id: "hipsCm", label: "Tour de hanches", unit: "cm", min: 50, max: 200, prompt: "hips" },
 ] as const;
 
+// Corpulence choisie par le client, facultative. Elle remplace celle déduite
+// de la taille et du poids, qui classe à tort une personne musclée en « forte ».
+export const BODY_BUILDS = [
+  { id: "slim", label: "Mince" },
+  { id: "average", label: "Moyenne" },
+  { id: "muscular", label: "Musclée" },
+  { id: "heavy", label: "Forte" },
+] as const;
+export type BodyBuild = (typeof BODY_BUILDS)[number]["id"];
+
+export function isBodyBuild(value: unknown): value is BodyBuild {
+  return BODY_BUILDS.some((b) => b.id === value);
+}
+
 export type MeasurementId = (typeof BODY_MEASUREMENTS)[number]["id"];
-export type BodyMeasurements = Partial<Record<MeasurementId, number>>;
+export type BodyMeasurements = Partial<Record<MeasurementId, number>> & { build?: BodyBuild };
 
 // "read" donne la valeur brute d'un champ : formulaire du navigateur ou FormData
 // reçu par le serveur. Un champ vide est simplement ignoré.
-export function readBodyMeasurements(read: (id: MeasurementId) => unknown): BodyMeasurements | { error: string } {
+export function readBodyMeasurements(read: (id: MeasurementId | "build") => unknown): BodyMeasurements | { error: string } {
   const measurements: BodyMeasurements = {};
+  const build = read("build") ?? "";
+  if (build !== "") {
+    if (!isBodyBuild(build)) return { error: "Corpulence inconnue." };
+    measurements.build = build;
+  }
   for (const { id, label, unit, min, max } of BODY_MEASUREMENTS) {
     const raw = read(id) ?? "";
     if (raw === "") continue;
@@ -42,8 +61,9 @@ export function describeBody(measurements: BodyMeasurements): string | null {
     const value = measurements[id];
     return value === undefined ? [] : [`${prompt} ${value} ${unit}`];
   });
+  const { heightCm, weightKg, build } = measurements;
+  if (build) parts.push(`${build} build`);
+  else if (heightCm !== undefined && weightKg !== undefined) parts.push(`${buildWord(heightCm, weightKg)} build`);
   if (parts.length === 0) return null;
-  const { heightCm, weightKg } = measurements;
-  if (heightCm !== undefined && weightKg !== undefined) parts.push(`${buildWord(heightCm, weightKg)} build`);
   return `Real body measurements of the new person: ${parts.join(", ")}. Match this silhouette and this height relative to the other people in the video, without changing the outfit or the movements.`;
 }

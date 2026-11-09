@@ -1,7 +1,7 @@
 import { useId } from "react";
-import { BODY_MEASUREMENTS, type MeasurementId } from "@/lib/body-measurements";
+import { BODY_BUILDS, BODY_MEASUREMENTS, type MeasurementId } from "@/lib/body-measurements";
 
-export type MeasurementValues = Partial<Record<MeasurementId, string>>;
+export type MeasurementValues = Partial<Record<MeasurementId | "build", string>>;
 
 // Bloc « Mensurations » d'un formulaire de vidéo, facultatif. Clavier numérique
 // sur téléphone ; seuls les chiffres sont gardés. Les limites sont vérifiées à
@@ -13,10 +13,11 @@ export function MeasurementsFields({
   disabled,
 }: {
   values: MeasurementValues;
-  onChange: (id: MeasurementId, value: string) => void;
+  onChange: (id: MeasurementId | "build", value: string) => void;
   disabled: boolean;
 }) {
   const titleId = useId();
+  const buildId = useId();
   return (
     <div role="group" aria-labelledby={titleId} className="liquid-glass rounded-[24px] p-5">
       <h2 id={titleId} className="text-lg font-semibold">Mensurations</h2>
@@ -47,6 +48,32 @@ export function MeasurementsFields({
             </span>
           </label>
         ))}
+      </div>
+      <div role="radiogroup" aria-labelledby={buildId} className="mt-4">
+        <span id={buildId} className="block text-sm font-medium">Corpulence</span>
+        <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {BODY_BUILDS.map(({ id, label }) => {
+            const selected = values.build === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                // Un second clic retire le choix : le champ reste facultatif.
+                onClick={() => onChange("build", selected ? "" : id)}
+                disabled={disabled}
+                className={`min-h-11 rounded-2xl border px-4 text-base transition-colors disabled:opacity-60 sm:text-sm ${
+                  selected
+                    ? "border-foreground/60 bg-foreground text-background"
+                    : "border-foreground/15 bg-white/80 hover:border-foreground/40"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -20,6 +20,19 @@ async function ensureBucket() {
   bucketReady = true;
 }
 
+// Accès direct au bucket privé, créé si besoin.
+export async function videosBucket() {
+  await ensureBucket();
+  return adminClient().storage.from(BUCKET);
+}
+
+// Lien de lecture d'un fichier du bucket, valable le temps de la conservation.
+export async function signedVideoUrl(file: string): Promise<string> {
+  const signed = await (await videosBucket()).createSignedUrl(file, RETENTION_SECONDS);
+  if (signed.error) throw signed.error;
+  return signed.data.signedUrl;
+}
+
 // Enregistre la vidéo et renvoie son lien de lecture (valable 7 jours).
 export async function storeVideo(file: string, video: Buffer): Promise<string> {
   await ensureBucket();
