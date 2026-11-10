@@ -32,7 +32,9 @@ export const SANTA_EFFECT = {
   preview: { video: "/effets/pere-noel-apercu.mp4", poster: "/effets/pere-noel-apercu.jpg" },
   // Proportionnel à la durée : 965 tokens pour 20 s, soit 1 302,75 pour 27 s,
   // arrondi au palier de 5 supérieur. ≈ 6,09 € avec l'abonnement Star.
-  tokens: 1305,
+  // TEST du 2026-11-10 : gratuit pour essayer la vidéo en production.
+  // Prix normal : 1305. À remettre après le test.
+  tokens: 0,
   priceEur: 9.99,
   seconds: 27,
 } as const satisfies Effect;
