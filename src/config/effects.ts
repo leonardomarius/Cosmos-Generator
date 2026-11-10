@@ -35,7 +35,9 @@ export const SANTA_EFFECT = {
   // TEST du 2026-11-10 : gratuit pour essayer la vidéo en production.
   // Prix normal : 1305. À remettre après le test.
   tokens: 0,
-  priceEur: 9.99,
+  // TEST du 2026-11-10 : achat unique gratuit, sans passer par Mollie
+  // (src/app/api/billing/video/route.ts). Prix normal : 9.99. À remettre après le test.
+  priceEur: 0,
   seconds: 27,
 } as const satisfies Effect;
 
