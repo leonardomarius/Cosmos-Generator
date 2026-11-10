@@ -28,6 +28,7 @@ import type { GenerationStatus } from "@/lib/fal";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
 import { SuspendedText } from "@/components/AccountNotices";
 import { GenerationProgress } from "@/components/GenerationProgress";
+import { Mascot } from "@/components/Mascot";
 import { MeasurementsFields, type MeasurementValues } from "@/components/MeasurementsFields";
 import { ASPECT_LABELS, Picker } from "@/components/PromptStudio";
 import { readBodyMeasurements } from "@/lib/body-measurements";
@@ -295,6 +296,7 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
       {/* Champ de saisie collé en bas de l'écran ; la conversation défile
           derrière le verre. */}
       <form ref={formRef} onSubmit={send} className="sticky bottom-0 z-10 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2">
+        <Mascot busy={busy} done={generation?.status === "done"} />
         <div className="liquid-glass space-y-2 rounded-[28px] p-2">
           {photos.length > 0 && (
             <div className="flex flex-wrap gap-3 px-2 pt-2">
