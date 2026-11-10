@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   if (email.length > EMAIL_RULES.maxLength || !EMAIL_RULES.pattern.test(email)) {
     return Response.json({ error: "Adresse email invalide." }, { status: 400 });
   }
-  const next = safeNextPath(body?.next, "/creer");
+  const next = safeNextPath(body?.next, "/chat");
 
   const supabase = await sessionClient();
   const { error } = await supabase.auth.signInWithOtp({

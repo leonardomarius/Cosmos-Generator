@@ -11,7 +11,8 @@ import {
   type VideoDuration,
 } from "@/config/product";
 
-export type GenerationKind = "image" | "video";
+// "star" : preset de la vidéo de star (une photo, mensurations facultatives).
+export type GenerationKind = "image" | "video" | "star";
 export type DraftPhoto = { file: File; preview: string };
 
 export type ChatDraft = {
@@ -73,7 +74,7 @@ export function readStoredDraft(): Partial<ChatDraft> | null {
     if (!raw || typeof raw !== "object") return null;
     const draft: Partial<ChatDraft> = {};
     if (typeof raw.prompt === "string") draft.prompt = raw.prompt;
-    if (raw.kind === "image" || raw.kind === "video") draft.kind = raw.kind;
+    if (raw.kind === "image" || raw.kind === "video" || raw.kind === "star") draft.kind = raw.kind;
     if (isVideoDuration(raw.duration)) draft.duration = raw.duration;
     if (isAspectRatio(raw.aspectRatio)) draft.aspectRatio = raw.aspectRatio;
     return draft;

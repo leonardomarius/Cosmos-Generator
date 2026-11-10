@@ -12,7 +12,7 @@ const ERRORS: Record<string, string> = {
 // Connexion sans mot de passe : avec Google, ou par un lien envoyé par email.
 export function LoginForm() {
   const params = useSearchParams();
-  const next = params.get("next") ?? "/creer";
+  const next = params.get("next") ?? "/chat";
   const [email, setEmail] = useState("");
   const [sending, setSending] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);

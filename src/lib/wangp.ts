@@ -100,7 +100,7 @@ async function finishJob(id: string, result: { status: "done"; path: string } | 
     await sendResultReadyEmail(job.email, model, await signedVideoUrl(result.path), id);
   } else {
     console.error(`Génération WanGP ${id} échouée : ${result.error}`);
-    const retryPath = model === "kling4" ? "/creer" : model === "statue" ? "/statue" : "/";
+    const retryPath = model === "kling4" ? "/chat?type=star" : model === "statue" ? "/statue" : "/";
     await sendGenerationFailedEmail(job.email, model, `${publicBaseUrl()}${retryPath}`, id);
   }
 }

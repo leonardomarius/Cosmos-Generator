@@ -6,7 +6,7 @@ import { sessionClient } from "@/lib/supabase";
 // première connexion.
 export async function POST(request: Request) {
   const form = await request.formData().catch(() => null);
-  const next = safeNextPath(form?.get("next"), "/creer");
+  const next = safeNextPath(form?.get("next"), "/chat");
   const base = siteUrl(request);
 
   const supabase = await sessionClient();

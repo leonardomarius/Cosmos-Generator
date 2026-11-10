@@ -2,9 +2,8 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ChatLink } from "@/components/ChatLink";
 import { BeforeAfter } from "@/components/BeforeAfter";
-import { exampleVideoSources } from "@/components/ExampleVideo";
 import { IMAGE_EXAMPLE } from "@/config/examples";
-import { VIDEO_DURATIONS, formatTokens, tokensFor } from "@/config/product";
+import { formatTokens, tokensFor } from "@/config/product";
 
 // Côte à côte, les deux cartes du hero partagent les rangées de la grille
 // (subgrid) : titres, textes et pieds restent alignés, même quand un titre
@@ -15,37 +14,31 @@ const VISUAL = "relative aspect-[16/10] overflow-hidden rounded-[24px] bg-foregr
 // Hero de l'accueil : vidéo et générations historiques côte à côte (empilées
 // sur mobile), même gabarit et même poids.
 export function GenerationCards() {
-  const video = exampleVideoSources();
-
   return (
     <div className="grid gap-5 md:grid-cols-2 md:grid-rows-[auto_auto_1fr_auto]">
-      <ChatLink kind="video" className={`${HERO_CARD} liquid-glass--interactive`}>
+      {/* Preset de la vidéo de star (rendu WanGP du 2026-11-10), lancé depuis le chat. */}
+      <ChatLink kind="star" className={`${HERO_CARD} liquid-glass--interactive`}>
         <div className={VISUAL}>
-          {video ? (
-            <>
-              <video
-                src={video.src}
-                poster={video.poster}
-                autoPlay
-                muted
-                loop
-                playsInline
-                className="h-full w-full object-cover object-[50%_42%] transition-transform duration-700 ease-(--ease-soft) group-hover:scale-[1.03]"
-              />
-              <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">
-                Généré par Cosmos
-              </span>
-            </>
-          ) : (
-            <span className="hero-mesh hero-mesh--video" />
-          )}
+          <video
+            src="/exemples/video-de-star.mp4"
+            poster="/exemples/video-de-star.jpg"
+            aria-label="Une personne arrive en star : elle sort d'un SUV et passe entre ses gardes du corps devant des fans qui filment"
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="h-full w-full object-cover object-[50%_40%] transition-transform duration-700 ease-(--ease-soft) group-hover:scale-[1.03]"
+          />
+          <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">
+            Généré par Cosmos
+          </span>
         </div>
         <CardBody
-          title="Génération Vidéo"
-          text={`Décris une scène, Cosmos la filme : de ${VIDEO_DURATIONS[0]} à ${VIDEO_DURATIONS.at(-1)} secondes, en portrait, paysage ou carré.`}
-          note={`Dès ${formatTokens(tokensFor("prompt", VIDEO_DURATIONS[0]))}`}
+          title="Vidéo de star"
+          text="Une photo suffit : la personne de ton choix arrive en star, entre ses gardes du corps et des fans qui la filment."
+          note={formatTokens(tokensFor("kling4"))}
           icon={<path d="M8 5.5v13a.8.8 0 0 0 1.2.7l10.4-6.5a.8.8 0 0 0 0-1.4L9.2 4.8a.8.8 0 0 0-1.2.7Z" />}
-          action={<Cta>Créer une vidéo</Cta>}
+          action={<Cta>Créer ma vidéo de star</Cta>}
         />
       </ChatLink>
 

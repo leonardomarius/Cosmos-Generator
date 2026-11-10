@@ -7,7 +7,7 @@ import { sessionClient } from "@/lib/supabase";
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const code = params.get("code");
-  const next = safeNextPath(params.get("next"), "/creer");
+  const next = safeNextPath(params.get("next"), "/chat");
   const base = siteUrl(request);
 
   if (code) {

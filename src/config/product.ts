@@ -108,8 +108,8 @@ export const MODELS = {
     prompt: REPLACE_PROMPT,
     // 0,094 $/s facturé sur l'entrée + la sortie : 0,188 $ par seconde produite.
     usdPerSecond: 0.188,
-    // TEST du 2026-11-10 : gratuit pour essayer le preset WanGP en production.
-    // Prix normal : 1375. À remettre après le test.
+    // Gratuit depuis le 2026-11-10, à la demande du fondateur : la vidéo de star
+    // (preset WanGP rendu sur le PC) est l'offre d'appel du chat. Ancien prix : 1375.
     tokens: 0,
   },
   // Photos du client : 1. le visage de face ; 2. le visage de profil.

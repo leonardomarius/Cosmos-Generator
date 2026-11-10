@@ -28,7 +28,9 @@ import type { GenerationStatus } from "@/lib/fal";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
 import { SuspendedText } from "@/components/AccountNotices";
 import { GenerationProgress } from "@/components/GenerationProgress";
+import { MeasurementsFields, type MeasurementValues } from "@/components/MeasurementsFields";
 import { ASPECT_LABELS, Picker } from "@/components/PromptStudio";
+import { readBodyMeasurements } from "@/lib/body-measurements";
 import { useGeneration } from "@/components/useGeneration";
 
 // suspendedContact : compte bloqué, l'adresse de contact à afficher.
@@ -102,7 +104,7 @@ function DraftReader({ onRead }: { onRead: (draft: Partial<ChatDraft>) => void }
     if (read.current) return;
     read.current = true;
     const draft = readStoredDraft() ?? {};
-    if (type === "image" || type === "video") draft.kind = type;
+    if (type === "image" || type === "video" || type === "star") draft.kind = type;
     if (Object.keys(draft).length > 0) onRead(draft);
   }, [type, onRead]);
   return null;
@@ -115,6 +117,7 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
   const [duration, setDuration] = useState<VideoDuration>(draft.duration ?? 5);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(draft.aspectRatio ?? "9:16");
   const [consent, setConsent] = useState(draft.consent ?? false);
+  const [measurements, setMeasurements] = useState<MeasurementValues>({});
   const [inputError, setInputError] = useState<string | null>(null);
   const [turns, setTurns] = useState<Turn[]>([]);
   const { start, error, notifiedEmail, starting, generation, busy } = useGeneration(account?.email ?? null);
@@ -148,12 +151,15 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
     end.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [turns.length, starting, generation?.status]);
 
-  const model: ModelId = kind === "image" ? "image" : photos.length > 0 ? "promptImages" : "prompt";
+  const star = kind === "star";
+  const model: ModelId = star ? "kling4" : kind === "image" ? "image" : photos.length > 0 ? "promptImages" : "prompt";
   const cost = tokensFor(model, duration);
   const enoughTokens = !account || account.balance >= cost;
   const needsConsent = photos.length > 0;
-  const canGenerate =
-    !!account && prompt.trim().length > 0 && (!needsConsent || consent) && enoughTokens && !busy;
+  // Vidéo de star : une photo de la personne (en pied, puis un gros plan facultatif), sans texte.
+  const maxPhotos = star ? UPLOAD_RULES.maxPhotos : PROMPT_RULES.maxImages;
+  const hasInput = star ? photos.length > 0 : prompt.trim().length > 0;
+  const canGenerate = !!account && hasInput && (!needsConsent || consent) && enoughTokens && !busy;
 
   // Texte et réglages gardés dans l'onglet (retour de la page de connexion).
   function remember(patch: Partial<Pick<ChatDraft, "prompt" | "kind" | "duration" | "aspectRatio">>) {
@@ -166,8 +172,8 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
     input.value = "";
     setInputError(null);
 
-    if (picked.length > PROMPT_RULES.maxImages - photos.length) {
-      setInputError(`${PROMPT_RULES.maxImages} images maximum.`);
+    if (picked.length > maxPhotos - photos.length) {
+      setInputError(`${maxPhotos} images maximum.`);
       return;
     }
     const added: DraftPhoto[] = [];
@@ -194,14 +200,19 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
   async function send(e?: React.FormEvent) {
     e?.preventDefault();
     if (!canGenerate) return;
-    const text = prompt.trim();
+    const sizes = star ? readBodyMeasurements((id) => measurements[id]) : {};
+    if ("error" in sizes) {
+      setInputError(sizes.error);
+      return;
+    }
+    const text = prompt.trim() || (star ? "Vidéo de star" : "");
     const sent = photos;
-    const details = [
+    const details = (star ? ["Vidéo de star", formatTokens(cost)] : [
       kind === "video" ? "Vidéo" : "Image",
       kind === "video" && `${duration} s`,
       ASPECT_LABELS[aspectRatio],
       formatTokens(cost),
-    ]
+    ])
       .filter(Boolean)
       .join(" · ");
     setTurns((current) => [
@@ -215,6 +226,16 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
     clearChatDraft();
 
     const body = new FormData();
+    if (star) {
+      for (const [id, value] of Object.entries(sizes)) body.append(id, String(value));
+      // Réduites à 2048 px : assez pour garder les détails du visage sur une photo en pied.
+      for (const [i, photo] of sent.entries()) {
+        body.append("photos", new File([await shrinkPhoto(photo.file, 2048)], `photo-${i + 1}.jpg`, { type: "image/jpeg" }));
+      }
+      body.append("consent", String(consent));
+      await start(model, body);
+      return;
+    }
     body.append("prompt", text);
     body.append("aspectRatio", aspectRatio);
     if (kind === "video") body.append("duration", String(duration));
@@ -239,7 +260,7 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
     <div className="flex flex-1 flex-col">
       <div className="flex flex-1 flex-col gap-8 pb-8 pt-6 sm:pt-10">
         {turns.length === 0 ? (
-          <Welcome />
+          <Welcome star={star} />
         ) : (
           <>
             <h1 className="sr-only">Chat Cosmos Generator</h1>
@@ -257,6 +278,19 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
         )}
         <div ref={endRef} />
       </div>
+
+      {star && (
+        <div className="pb-4">
+          <MeasurementsFields
+            values={measurements}
+            onChange={(id, value) => {
+              setInputError(null);
+              setMeasurements((current) => ({ ...current, [id]: value }));
+            }}
+            disabled={busy}
+          />
+        </div>
+      )}
 
       {/* Champ de saisie collé en bas de l'écran ; la conversation défile
           derrière le verre. */}
@@ -296,9 +330,11 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
               maxLength={PROMPT_RULES.maxLength}
               rows={2}
               placeholder={
-                kind === "video"
-                  ? "Décris ta vidéo : un astronaute qui surfe sur les anneaux de Saturne…"
-                  : "Décris ton image : un portrait de mon chat en général romain…"
+                star
+                  ? "Ajoute une photo en pied de la personne : aucun texte nécessaire."
+                  : kind === "video"
+                    ? "Décris ta vidéo : un astronaute qui surfe sur les anneaux de Saturne…"
+                    : "Décris ton image : un portrait de mon chat en général romain…"
               }
               className="block max-h-[40dvh] min-h-14 w-full resize-none bg-transparent px-3 pt-2 text-base leading-relaxed [field-sizing:content] placeholder:text-tertiary focus:outline-none"
             />
@@ -323,11 +359,16 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
           <div className="flex flex-wrap items-center gap-2">
             <Picker
               label="Type"
-              options={(["video", "image"] as const).map((k) => ({ value: k, label: k === "video" ? "Vidéo" : "Image" }))}
+              options={(["video", "star", "image"] as const).map((k) => ({ value: k, label: KIND_LABELS[k] }))}
               value={kind}
               onChange={(value) => {
                 setKind(value);
                 remember({ kind: value });
+                // La vidéo de star prend au plus 2 photos : les autres sont retirées.
+                if (value === "star" && photos.length > UPLOAD_RULES.maxPhotos) {
+                  photos.slice(UPLOAD_RULES.maxPhotos).forEach((p) => URL.revokeObjectURL(p.preview));
+                  setPhotos(photos.slice(0, UPLOAD_RULES.maxPhotos));
+                }
               }}
               disabled={busy}
             />
@@ -343,7 +384,7 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
                 disabled={busy}
               />
             )}
-            <Picker
+            {!star && <Picker
               label="Format"
               options={ASPECT_RATIOS.map((r) => ({ value: r, label: ASPECT_LABELS[r] }))}
               value={aspectRatio}
@@ -352,8 +393,8 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
                 remember({ aspectRatio: value });
               }}
               disabled={busy}
-            />
-            {photos.length < PROMPT_RULES.maxImages && !busy && (
+            />}
+            {photos.length < maxPhotos && !busy && (
               <label
                 title="Ajouter des images"
                 className="liquid-glass liquid-glass--interactive flex size-9 cursor-pointer items-center justify-center rounded-full text-secondary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-3 has-[:focus-visible]:outline-foreground/85 pointer-coarse:size-11"
@@ -386,7 +427,7 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
                 <button
                   type="submit"
                   disabled={!canGenerate}
-                  aria-label={`Générer ${kind === "video" ? "la vidéo" : "l'image"} · ${formatTokens(cost)}`}
+                  aria-label={`Générer ${kind === "image" ? "l'image" : "la vidéo"} · ${formatTokens(cost)}`}
                   className="liquid-glass liquid-glass--interactive liquid-glass--accent flex size-11 items-center justify-center rounded-full disabled:opacity-50 disabled:saturate-50"
                 >
                   <SendIcon />
@@ -405,9 +446,11 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
   );
 }
 
+const KIND_LABELS: Record<GenerationKind, string> = { video: "Vidéo", star: "Vidéo de star", image: "Image" };
+
 // En haut, sur du verre : le centre de l'écran reste à la fresque (logo et
 // mains), sur laquelle un texte ne se lirait pas.
-function Welcome() {
+function Welcome({ star }: { star: boolean }) {
   return (
     <div className="liquid-glass mx-auto flex w-full max-w-xl flex-col items-center rounded-[32px] px-6 py-7 text-center sm:py-8">
       <span className="glass-icon" aria-hidden="true">
@@ -415,8 +458,9 @@ function Welcome() {
       </span>
       <h1 className="mt-5 text-title font-semibold">Que veux-tu créer ?</h1>
       <p className="mt-3 max-w-md text-lg leading-relaxed text-secondary">
-        Décris une vidéo ou une image : le résultat s&apos;affiche ici, dans la
-        conversation.
+        {star
+          ? "Ajoute une photo de la personne : Cosmos la fait arriver en star, entre gardes du corps et fans. Le résultat s'affiche ici."
+          : "Décris une vidéo ou une image : le résultat s'affiche ici, dans la conversation."}
       </p>
     </div>
   );
@@ -503,7 +547,7 @@ function Reply({ kind, outcome, starting }: { kind: GenerationKind; outcome: Out
           <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
         )}
         {empty && <p className="text-secondary">Demande interrompue.</p>}
-        <GenerationProgress kind={kind} generation={generation} notifiedEmail={notifiedEmail} />
+        <GenerationProgress kind={kind === "image" ? "image" : "video"} generation={generation} notifiedEmail={notifiedEmail} />
       </div>
     </div>
   );

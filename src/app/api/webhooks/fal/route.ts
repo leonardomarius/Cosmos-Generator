@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     } else {
       console.error(`Génération ${requestId} échouée : ${result.error}`);
       // Les vidéos de référence se relancent depuis leur page, le reste depuis l'accueil.
-      const retryPath = model === "kling4" ? "/creer" : model === "statue" ? "/statue" : "/";
+      const retryPath = model === "kling4" ? "/chat?type=star" : model === "statue" ? "/statue" : "/";
       await sendGenerationFailedEmail(email, model, `${publicBaseUrl()}${retryPath}`, requestId);
     }
     return Response.json({ sent: true });

@@ -18,7 +18,7 @@ export function Header() {
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2">
           <Link
-            href="/creer"
+            href="/chat"
             className={`liquid-glass liquid-glass--interactive liquid-glass--accent sm:px-4 ${LINK}`}
           >
             {/* Sous 375 px, « Créer » seul : le header tient sur une ligne. */}
