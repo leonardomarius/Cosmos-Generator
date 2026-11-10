@@ -127,7 +127,7 @@ export function checkChildName(name: string): string | null {
   return null;
 }
 
-// Adresse où la vidéo est envoyée : celle du compte par défaut, modifiable.
+// Adresse où la vidéo est envoyée, saisie par le client dans le formulaire.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function checkDeliveryEmail(email: string): string | null {
   if (!email) return "Indique l'email où recevoir la vidéo.";

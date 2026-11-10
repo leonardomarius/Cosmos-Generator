@@ -36,8 +36,8 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
   const cost = SANTA_EFFECT.tokens;
   const [buying, setBuying] = useState(false);
   const [polls, setPolls] = useState(0);
-  // Où recevoir la vidéo : l'email du compte par défaut.
-  const [deliveryEmail, setDeliveryEmail] = useState(email);
+  // Où recevoir la vidéo : saisi par le client, jamais pré-rempli.
+  const [deliveryEmail, setDeliveryEmail] = useState("");
   const [childName, setChildName] = useState("");
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [gifts, setGifts] = useState<string[]>([""]);
@@ -74,7 +74,7 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
     loadSantaDraft(email).then((draft) => {
       if (!active) return;
       if (draft) {
-        setDeliveryEmail(draft.deliveryEmail ?? email);
+        setDeliveryEmail(draft.deliveryEmail ?? "");
         setChildName(draft.childName);
         setGifts(draft.gifts);
         setPhoto({ file: draft.photo, preview: URL.createObjectURL(draft.photo) });
