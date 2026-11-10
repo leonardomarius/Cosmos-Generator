@@ -52,9 +52,8 @@ export const MODELS = {
     kind: "video",
     // 0,094 $/s facturé sur l'entrée + la sortie : 0,188 $ par seconde produite.
     usdPerSecond: 0.188,
-    // Gratuit depuis le 2026-11-10, à la demande du fondateur : la vidéo de star
-    // (preset WanGP rendu sur le PC) est l'offre d'appel du chat. Ancien prix : 1375.
-    tokens: 0,
+    // Vidéo de star (preset WanGP rendu sur le PC) : 1300 tokens depuis le 2026-11-10.
+    tokens: 1300,
   },
   // Photos du client : 1. le visage de face ; 2. le visage de profil.
   statue: {
