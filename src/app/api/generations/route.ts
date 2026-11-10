@@ -8,6 +8,7 @@ import {
   tokensFor,
 } from "@/config/product";
 import { readBodyMeasurements } from "@/lib/body-measurements";
+import { checkPrompt } from "@/lib/content-filter";
 import type { GenerationRequest } from "@/lib/generation";
 import { currentUser } from "@/lib/supabase";
 import { AccountBlockedError, InsufficientTokensError, markGenerationQueued, reserveGeneration, settleGeneration } from "@/lib/tokens";
@@ -95,6 +96,10 @@ export async function POST(request: Request) {
   // Une personne réelle peut figurer sur les images envoyées.
   if ("photos" in req && req.photos.length > 0 && form.get("consent") !== "true") {
     return Response.json({ error: "Le consentement est obligatoire." }, { status: 400 });
+  }
+  if ("prompt" in req) {
+    const refused = checkPrompt(req.prompt, "photos" in req && req.photos.length > 0);
+    if (refused) return Response.json({ error: refused }, { status: 400 });
   }
 
   const tokens = tokensFor(req.model, "duration" in req ? req.duration : undefined);
