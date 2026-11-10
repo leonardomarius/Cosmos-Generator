@@ -22,8 +22,9 @@ const TYPING_IDLE_MS = 1_500;
 // Clignement des yeux : intervalle aléatoire entre ces deux valeurs.
 const BLINK_MIN_MS = 3_000;
 const BLINK_MAX_MS = 6_000;
-// Déplacement maximal des yeux vers le curseur, en pixels à l'écran.
-const EYE_MAX_PX = 1.5;
+// Déplacement maximal des yeux vers le curseur, en pixels du dessin (grille
+// de 16 × 21) : 1 = tout l'espace libre autour des yeux.
+const EYE_MAX = 1;
 // Durées des animations ponctuelles (identiques à celles du CSS).
 const ACTION_MS = { jump: 600, done: 1_000, dance: 2_000 } as const;
 
@@ -165,9 +166,9 @@ function Orbi({ busy, done }: { busy: boolean; done: boolean }) {
   }, []);
 
   // Les yeux suivent le curseur (ou le champ pendant la frappe), avec une
-  // interpolation douce, une seule mise à jour par image.
+  // interpolation douce, une seule mise à jour par image. Gardé en mouvement
+  // réduit : quelques pixels, guidés par le curseur.
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let pointer: { x: number; y: number } | null = null;
     let current = { x: 0, y: 0 };
     let frame = 0;
@@ -178,8 +179,7 @@ function Orbi({ busy, done }: { busy: boolean; done: boolean }) {
       const eyes = eyesRef.current;
       if (!root || !eyes) return;
       const rect = root.getBoundingClientRect();
-      // Écran → unités du dessin (16 de large).
-      const unit = rect.width > 0 ? EYE_MAX_PX / (rect.width / 16) : 0;
+      const unit = EYE_MAX;
       let target = { x: 0, y: 0 };
       if (root.dataset.mode === "leaving") {
         // Il regarde vers la sortie.
@@ -277,7 +277,6 @@ function Orbi({ busy, done }: { busy: boolean; done: boolean }) {
             </svg>
           </div>
         </div>
-        <div className="orbi-plinth" />
       </div>
       <button type="button" className="orbi-hide" onClick={() => writeHidden(true)} aria-label="Masquer Orbi, la mascotte">
         <svg viewBox="0 0 10 10" aria-hidden="true">
