@@ -16,7 +16,8 @@ const VISUAL = "relative aspect-[16/10] overflow-hidden rounded-[24px] bg-foregr
 export function GenerationCards() {
   return (
     <div className="grid gap-5 md:grid-cols-2 md:grid-rows-[auto_auto_1fr_auto]">
-      {/* Preset de la vidéo de star (rendu WanGP du 2026-11-10), lancé depuis le chat. */}
+      {/* Preset de la vidéo de star (rendu WanGP du 2026-11-10), lancé depuis le chat. La vidéo
+          verticale est montée en 16:10 sur un fond flou : le cadre de la carte la montre entière. */}
       <ChatLink kind="star" className={`${HERO_CARD} liquid-glass--interactive`}>
         <div className={VISUAL}>
           <video
@@ -27,7 +28,7 @@ export function GenerationCards() {
             muted
             loop
             playsInline
-            className="h-full w-full object-cover object-[50%_40%] transition-transform duration-700 ease-(--ease-soft) group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition-transform duration-700 ease-(--ease-soft) group-hover:scale-[1.03]"
           />
           <span className="absolute bottom-3 right-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">
             Généré par Cosmos
