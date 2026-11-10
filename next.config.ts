@@ -12,7 +12,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["ffmpeg-static"],
   outputFileTracingIncludes: {
     "/api/effets/pere-noel": [
-      "./node_modules/ffmpeg-static/ffmpeg*",
+      // Sur Vercel, le binaire Linux qui a drawtext (src/lib/santa-video.ts).
+      "./node_modules/@ffmpeg-installer/linux-x64/ffmpeg",
       "./src/assets/fonts/**/*",
       "./src/assets/effects/pere-noel/**/*",
     ],

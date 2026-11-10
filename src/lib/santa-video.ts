@@ -5,7 +5,8 @@
 //    le titre et les cadeaux en dessous, chaque ligne à une taille qui tient.
 // 2. La carte collée sur l'écran de chaque plan, puis la vidéo réencodée.
 import { execFile } from "node:child_process";
-import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { access, chmod, copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -198,9 +199,36 @@ function compositeGraph(template: SantaTemplate): { inputs: string[]; graph: str
   return { inputs, graph: parts.join(";"), output: "assembled" };
 }
 
+// Binaire Linux (Vercel) : celui de ffmpeg-static n'a pas le filtre drawtext,
+// qui écrit le prénom et les cadeaux. Celui-ci (@ffmpeg-installer/linux-x64,
+// dépendance facultative installée seulement sous Linux) l'a. S'il n'est pas
+// exécutable, il en est fait une copie exécutable dans le dossier temporaire.
+// Ailleurs (le PC), ffmpeg-static a drawtext.
+const LINUX_FFMPEG = "node_modules/@ffmpeg-installer/linux-x64/ffmpeg";
+let binary: Promise<string> | null = null;
+async function findFfmpeg(): Promise<string> {
+  if (process.platform !== "linux") {
+    if (!ffmpegPath) throw new Error("ffmpeg introuvable pour cette plateforme");
+    return ffmpegPath;
+  }
+  const bundled = fromRoot(LINUX_FFMPEG);
+  try {
+    await access(bundled, constants.X_OK);
+    return bundled;
+  } catch {
+    const copy = path.join(tmpdir(), "cosmos-ffmpeg");
+    await copyFile(bundled, copy);
+    await chmod(copy, 0o755);
+    return copy;
+  }
+}
+
 async function ffmpeg(args: string[], cwd: string) {
-  if (!ffmpegPath) throw new Error("ffmpeg introuvable pour cette plateforme");
-  await run(ffmpegPath, ["-hide_banner", "-loglevel", "error", "-y", ...args], { cwd, maxBuffer: 10 * 1024 * 1024 });
+  binary ??= findFfmpeg().catch((err) => {
+    binary = null;
+    throw err;
+  });
+  await run(await binary,["-hide_banner", "-loglevel", "error", "-y", ...args], { cwd, maxBuffer: 10 * 1024 * 1024 });
 }
 
 // Vidéo finale (MP4) d'une commande.
