@@ -127,6 +127,14 @@ export function checkChildName(name: string): string | null {
   return null;
 }
 
+// Adresse où la vidéo est envoyée : celle du compte par défaut, modifiable.
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export function checkDeliveryEmail(email: string): string | null {
+  if (!email) return "Indique l'email où recevoir la vidéo.";
+  if (email.length > 254 || !EMAIL_PATTERN.test(email)) return "Cet email n'est pas valide.";
+  return null;
+}
+
 // Renvoie un message d'erreur, ou null si la liste de cadeaux convient.
 export function checkGifts(gifts: string[]): string | null {
   if (gifts.length < SANTA_RULES.minGifts) return "Ajoute au moins un cadeau.";

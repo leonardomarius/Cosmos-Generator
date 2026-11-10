@@ -1,4 +1,4 @@
-import { SANTA_EFFECT, cleanText } from "@/config/effects";
+import { SANTA_EFFECT, checkDeliveryEmail, cleanText } from "@/config/effects";
 import { accountSuspendedMessage } from "@/config/product";
 import { createVideoPayment } from "@/lib/mollie";
 import { checkSantaTexts } from "@/lib/santa-text";
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const user = await currentUser();
   if (!user) return Response.json({ error: "Connecte-toi d'abord." }, { status: 401 });
 
-  const body = (await request.json().catch(() => null)) as { waiver?: unknown; childName?: unknown; gifts?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { waiver?: unknown; deliveryEmail?: unknown; childName?: unknown; gifts?: unknown } | null;
   try {
     if ((await getAccount(user.id)).blocked) return Response.json({ error: accountSuspendedMessage() }, { status: 403 });
     // Même renonciation que pour les tokens (art. L221-28 du Code de la consommation).
@@ -22,7 +22,9 @@ export async function POST(request: Request) {
       return Response.json({ error: "Coche la case d'accès immédiat pour continuer." }, { status: 400 });
     }
     const gifts = Array.isArray(body.gifts) ? body.gifts.map((gift) => cleanText(String(gift))) : [];
-    const problem = await checkSantaTexts(cleanText(String(body.childName ?? "")), gifts);
+    const problem =
+      checkDeliveryEmail(String(body.deliveryEmail ?? "").trim()) ??
+      (await checkSantaTexts(cleanText(String(body.childName ?? "")), gifts));
     if (problem) return Response.json({ error: problem }, { status: 400 });
 
     const url = await createVideoPayment(user, SANTA_EFFECT, `${siteUrl(request)}/effets/${SANTA_EFFECT.slug}?achat=ok`);

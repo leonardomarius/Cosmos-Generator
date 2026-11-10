@@ -12,6 +12,8 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 export type SantaDraft = {
   // Email du compte : un autre compte, sur le même ordinateur, n'y a pas accès.
   owner: string;
+  // Où envoyer la vidéo. Absent des commandes gardées avant ce champ.
+  deliveryEmail?: string;
   childName: string;
   gifts: string[];
   photo: File;

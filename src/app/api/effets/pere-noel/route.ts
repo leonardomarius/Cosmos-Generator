@@ -1,4 +1,4 @@
-import { SANTA_EFFECT, SANTA_RULES, SANTA_TEMPLATE, cleanText } from "@/config/effects";
+import { SANTA_EFFECT, SANTA_RULES, SANTA_TEMPLATE, checkDeliveryEmail, cleanText } from "@/config/effects";
 import { UPLOAD_RULES, accountSuspendedMessage } from "@/config/product";
 import { sendSantaVideoEmail } from "@/lib/email";
 import { checkSantaTexts } from "@/lib/santa-text";
@@ -13,11 +13,14 @@ import { storeVideo } from "@/lib/video-storage";
 export const maxDuration = 300;
 
 type Invalid = { error: string };
-type SantaOrder = { childName: string | null; gifts: string[]; photo: File };
+type SantaOrder = { deliveryEmail: string; childName: string | null; gifts: string[]; photo: File };
 
 // Commande du client : mêmes règles que dans le navigateur, on ne lui fait
 // jamais confiance.
 async function readOrder(form: FormData): Promise<SantaOrder | Invalid> {
+  const deliveryEmail = String(form.get("deliveryEmail") ?? "").trim();
+  const emailError = checkDeliveryEmail(deliveryEmail);
+  if (emailError) return { error: emailError };
   const childName = cleanText(String(form.get("childName") ?? ""));
   const gifts = form.getAll("gifts").map((gift) => cleanText(String(gift)));
   const textError = await checkSantaTexts(childName, gifts);
@@ -32,7 +35,7 @@ async function readOrder(form: FormData): Promise<SantaOrder | Invalid> {
   if (photo.size > UPLOAD_RULES.maxSizeBytes) return { error: "Image trop lourde." };
   // La photo est celle d'un enfant : réservé à son parent ou représentant légal.
   if (form.get("consent") !== "true") return { error: "Le consentement est obligatoire." };
-  return { childName: childName || null, gifts, photo };
+  return { deliveryEmail, childName: childName || null, gifts, photo };
 }
 
 // Vidéo du Père Noël : aucune IA ici, la photo et la liste sont collées sur
@@ -91,12 +94,12 @@ export async function POST(request: Request) {
   // La vidéo est prête : un incident d'enregistrement ou d'email ne doit pas
   // l'annuler (elle s'affiche sur la page de toute façon).
   await settleGeneration({ id: generationId }, "done").catch(console.error);
-  const emailNotification = await sendSantaVideoEmail(user.email, url, generationId).then(
+  const emailNotification = await sendSantaVideoEmail(order.deliveryEmail, url, generationId).then(
     () => true,
     (err) => {
       console.error(err);
       return false;
     },
   );
-  return Response.json({ url, emailNotification });
+  return Response.json({ url, emailNotification, emailedTo: order.deliveryEmail });
 }

@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ConfirmDialog, type Order } from "@/components/TokenShop";
-import { SANTA_EFFECT, SANTA_RULES, checkChildName, checkGifts, cleanText } from "@/config/effects";
-import { PROMPT_RULES, UPLOAD_RULES, formatTokens } from "@/config/product";
+import { SANTA_EFFECT, SANTA_RULES, checkChildName, checkDeliveryEmail, checkGifts, cleanText } from "@/config/effects";
+import { PRODUCT, PROMPT_RULES, UPLOAD_RULES, formatTokens } from "@/config/product";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
 import { clearSantaDraft, loadSantaDraft, saveSantaDraft } from "@/lib/santa-draft";
 
 type Photo = { file: File; preview: string };
-type Result = { url: string; emailed: boolean };
+// emailedTo : adresse où la vidéo est partie, null si l'envoi a échoué.
+type Result = { url: string; emailedTo: string | null };
 
 const GIFT_EXAMPLES = ["Un vélo rouge", "Une boîte de LEGO", "Un déguisement de pompier", "Un livre de dinosaures"];
 
@@ -35,6 +36,8 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
   const cost = SANTA_EFFECT.tokens;
   const [buying, setBuying] = useState(false);
   const [polls, setPolls] = useState(0);
+  // Où recevoir la vidéo : l'email du compte par défaut.
+  const [deliveryEmail, setDeliveryEmail] = useState(email);
   const [childName, setChildName] = useState("");
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [gifts, setGifts] = useState<string[]>([""]);
@@ -71,6 +74,7 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
     loadSantaDraft(email).then((draft) => {
       if (!active) return;
       if (draft) {
+        setDeliveryEmail(draft.deliveryEmail ?? email);
         setChildName(draft.childName);
         setGifts(draft.gifts);
         setPhoto({ file: draft.photo, preview: URL.createObjectURL(draft.photo) });
@@ -119,11 +123,14 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
   }
 
   const name = cleanText(childName);
+  const recipient = deliveryEmail.trim();
   const list = gifts.map(cleanText);
 
   // Commande complète ? Sinon, dit au client ce qui manque.
   function checkOrder(): boolean {
-    const problem = !photo ? "Ajoute une photo du visage de ton enfant." : (checkChildName(name) ?? checkGifts(list));
+    const problem = !photo
+      ? "Ajoute une photo du visage de ton enfant."
+      : (checkChildName(name) ?? checkGifts(list) ?? checkDeliveryEmail(recipient));
     setError(problem);
     return !problem;
   }
@@ -131,7 +138,7 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
   // Avant d'ouvrir le paiement : la commande doit survivre au passage sur Mollie.
   async function pay() {
     if (!photo || !checkOrder()) return;
-    await saveSantaDraft({ owner: email, childName: name, gifts: list, photo: photo.file });
+    await saveSantaDraft({ owner: email, deliveryEmail: recipient, childName: name, gifts: list, photo: photo.file });
     setBuying(true);
   }
 
@@ -143,6 +150,7 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
     setResult(null);
     setBusy(true);
     const body = new FormData();
+    body.append("deliveryEmail", recipient);
     body.append("childName", name);
     for (const gift of list) body.append("gifts", gift);
     const shrunk = await shrinkPhoto(photo.file, PROMPT_RULES.maxImageSidePx);
@@ -152,7 +160,7 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
     const data = await res?.json().catch(() => null);
     if (res?.ok && data?.url) {
       await clearSantaDraft();
-      setResult({ url: data.url, emailed: data.emailNotification === true });
+      setResult({ url: data.url, emailedTo: data.emailNotification === true ? String(data.emailedTo ?? recipient) : null });
     } else {
       setError(data?.error ?? "La vidéo n'a pas pu être créée. Réessaie dans un instant.");
     }
@@ -176,7 +184,7 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
   const videoOrder: Order = {
     id: "video",
     path: "/api/billing/video",
-    body: { childName: name, gifts: list },
+    body: { deliveryEmail: recipient, childName: name, gifts: list },
     title: SANTA_EFFECT.title,
     price: PRICE,
     detail: "Paiement en une fois, sans abonnement. Ta vidéo se crée dès ton retour sur le site.",
@@ -187,7 +195,7 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
 
   const enoughTokens = balance >= cost;
   const giftsFilled = gifts.every((g) => g.trim().length > 0);
-  const ready = photo !== null && giftsFilled && consent;
+  const ready = photo !== null && giftsFilled && recipient.length > 0 && consent;
   const showForm = draftChecked && !preparing && !result && !confirming;
   const field =
     "w-full rounded-[20px] border border-foreground/15 bg-white/80 px-4 py-3 text-base placeholder:text-tertiary focus:border-foreground/40 focus:outline-none";
@@ -218,9 +226,13 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
 
         {result && (
           <div className="mt-10 space-y-3">
-            {result.emailed && (
+            {result.emailedTo ? (
               <p className="text-center text-base text-secondary sm:text-sm">
-                Elle t&apos;a aussi été envoyée à <strong className="text-foreground">{email}</strong>.
+                Elle t&apos;a aussi été envoyée à <strong className="text-foreground">{result.emailedTo}</strong>.
+              </p>
+            ) : (
+              <p className="text-center text-base text-secondary sm:text-sm">
+                L&apos;email n&apos;a pas pu partir : télécharge-la depuis cette page.
               </p>
             )}
             <p className="text-center text-xs text-tertiary">Généré par Cosmos</p>
@@ -327,6 +339,24 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
               {SANTA_RULES.maxGiftLength} caractères maximum par cadeau, pour que la liste reste bien lisible.
             </p>
           </fieldset>
+
+          <label className="block space-y-2">
+            <span className="text-sm text-secondary">Email pour recevoir la vidéo</span>
+            <input
+              type="email"
+              value={deliveryEmail}
+              onChange={(e) => setDeliveryEmail(e.target.value)}
+              maxLength={254}
+              required
+              autoComplete="email"
+              inputMode="email"
+              placeholder="toi@exemple.fr"
+              className={field}
+            />
+            <span className="block text-xs text-tertiary">
+              Le lien de la vidéo y est envoyé dès qu&apos;elle est prête. Il reste valable {PRODUCT.retentionDays} jours.
+            </span>
+          </label>
 
           <p className="text-sm text-tertiary">
             Vidéo verticale de {SANTA_EFFECT.seconds} secondes, personnalisée avec la photo et la liste.
