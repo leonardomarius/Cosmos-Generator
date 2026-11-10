@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // Lus par chemin à l'exécution (src/lib/santa-video.ts, santa-text.ts) : Next
   // ne peut pas les deviner, on les ajoute au déploiement de la route.
+  // ffmpeg-static calcule le chemin de son binaire avec __dirname. Embarqué
+  // par Turbopack, ce chemin devient « /ROOT/node_modules/… », absent sur
+  // Vercel : le paquet doit être chargé tel quel par Node.
+  serverExternalPackages: ["ffmpeg-static"],
   outputFileTracingIncludes: {
     "/api/effets/pere-noel": [
       "./node_modules/ffmpeg-static/ffmpeg*",
