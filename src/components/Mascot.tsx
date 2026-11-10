@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import "./Mascot.css";
 
 // Orbi, la mascotte du chat : purement décorative. Elle lit l'état de la
@@ -11,7 +11,7 @@ import "./Mascot.css";
 // Présence d'Orbi après le chargement de la page : il danse et joue avec le
 // curseur, puis il en a marre et s'en va (pas pendant une frappe ou une
 // génération : il attend qu'elles finissent).
-const INTRO_MS = 30_000;
+const INTRO_MS = 20_000;
 // Départ : soupir (1,2 s) puis sortie en sautillant vers la droite (2,2 s),
 // comme dans Mascot.css.
 const LEAVE_MS = 3_400;
@@ -28,10 +28,7 @@ const EYE_MAX = 1;
 // Durées des animations ponctuelles (identiques à celles du CSS).
 const ACTION_MS = { jump: 600, done: 1_000, dance: 2_000 } as const;
 
-const STORAGE_KEY = "cosmos-orbi-hidden";
-
 export function Mascot({ busy, done }: { busy: boolean; done: boolean }) {
-  const hidden = useSyncExternalStore(subscribeHidden, readHidden, () => null);
   const anchorRef = useRef<HTMLDivElement>(null);
 
   // Au-dessus d'autres champs (mensurations de la vidéo de star), Orbi les
@@ -42,16 +39,9 @@ export function Mascot({ busy, done }: { busy: boolean; done: boolean }) {
     if (anchor) anchor.toggleAttribute("data-crowded", !!above?.querySelector("input, select, textarea"));
   });
 
-  if (hidden === null) return null;
   return (
     <div ref={anchorRef} className="orbi-anchor">
-      {hidden ? (
-        <button type="button" className="orbi-restore" onClick={() => writeHidden(false)} aria-label="Afficher Orbi, la mascotte">
-          <span aria-hidden="true" />
-        </button>
-      ) : (
-        <Orbi busy={busy} done={done} />
-      )}
+      <Orbi busy={busy} done={done} />
     </div>
   );
 }
@@ -278,11 +268,6 @@ function Orbi({ busy, done }: { busy: boolean; done: boolean }) {
           </div>
         </div>
       </div>
-      <button type="button" className="orbi-hide" onClick={() => writeHidden(true)} aria-label="Masquer Orbi, la mascotte">
-        <svg viewBox="0 0 10 10" aria-hidden="true">
-          <path d="M2.5 2.5l5 5M7.5 2.5l-5 5" />
-        </svg>
-      </button>
     </div>
   );
 }
@@ -327,35 +312,3 @@ const TOGA: Cell[] = [
   [10, 13, 3, 1, "purple"], [7, 14, 3, 1, "purple"],
   [4, 15, 3, 1, "purple"], [3, 16, 1, 1, "purple"],
 ];
-
-// ---------- Préférence « masquer Orbi » (localStorage) ----------
-
-const hiddenListeners = new Set<() => void>();
-// Repli quand localStorage est bloqué : le choix vaut pour cette page.
-let memoryHidden: boolean | null = null;
-
-function subscribeHidden(listener: () => void) {
-  hiddenListeners.add(listener);
-  return () => {
-    hiddenListeners.delete(listener);
-  };
-}
-
-function readHidden(): boolean {
-  if (memoryHidden !== null) return memoryHidden;
-  try {
-    return localStorage.getItem(STORAGE_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function writeHidden(hidden: boolean) {
-  try {
-    if (hidden) localStorage.setItem(STORAGE_KEY, "1");
-    else localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    memoryHidden = hidden;
-  }
-  hiddenListeners.forEach((listener) => listener());
-}
