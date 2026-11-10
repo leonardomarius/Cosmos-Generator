@@ -25,9 +25,10 @@ export default function PrivacyPage() {
         conservées selon les obligations légales.
       </p>
       <p>
-        Les mensurations, facultatives, ne sont pas enregistrées dans notre base
-        de données : elles sont transmises à fal.ai avec la demande de génération,
-        et peuvent rester jusqu&apos;à 90 jours dans l&apos;historique de ce service.
+        Les mensurations, facultatives, sont gardées avec la demande de génération
+        le temps de la créer, puis effacées dès que la génération est terminée.
+        Les images et vidéos sont générées sur nos propres machines : elles ne
+        sont transmises à aucun service d&apos;intelligence artificielle tiers.
       </p>
       <p>
         Pour un achat à l&apos;unité de la vidéo du Père Noël, la photo reste dans
@@ -37,7 +38,7 @@ export default function PrivacyPage() {
       </p>
       <h2>Sous-traitants</h2>
       <p>
-        Supabase (données), Mollie (paiement), fal.ai (génération d&apos;images et de vidéos),
+        Supabase (données et fichiers), Mollie (paiement),
         service de modération d&apos;images, Vercel (hébergement), service
         d&apos;envoi d&apos;emails.
       </p>

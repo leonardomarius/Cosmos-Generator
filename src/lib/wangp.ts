@@ -1,4 +1,4 @@
-// Générations rendues sur le PC avec WanGP au lieu de fal.ai : images, vidéos
+// Toutes les générations sont rendues sur le PC avec WanGP : images, vidéos
 // par prompt, vidéo de star et vidéo de la statue (presets du planificateur).
 // Le site ne peut pas joindre le PC : c'est le planificateur local
 // (WanGP-Planificateur/server.py) qui vient chercher les tâches ici, par les
@@ -6,8 +6,8 @@
 import { timingSafeEqual } from "node:crypto";
 import type { ModelId } from "@/config/product";
 import { sendGenerationFailedEmail, sendResultReadyEmail } from "@/lib/email";
-import type { GenerationRequest, GenerationStatus } from "@/lib/fal";
-import { publicBaseUrl } from "@/lib/fal";
+import type { GenerationRequest, GenerationStatus } from "@/lib/generation";
+import { publicBaseUrl } from "@/lib/generation";
 import { adminClient } from "@/lib/supabase";
 import { settleGeneration } from "@/lib/tokens";
 import { signedVideoUrl, videosBucket } from "@/lib/video-storage";
@@ -21,7 +21,7 @@ const MAX_RENDER_MS = 4 * 3600 * 1000;
 
 const EXTENSIONS: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
 
-// Tous les services passent par le PC dès que le pont est configuré.
+// Pont vers le PC configuré : sans lui, aucune génération n'est possible.
 export function handledByWangp(): boolean {
   return Boolean(process.env.WANGP_BRIDGE_SECRET);
 }
@@ -82,6 +82,8 @@ async function finishJob(id: string, result: { status: "done"; path: string } | 
       result_path: result.status === "done" ? result.path : null,
       error: result.status === "failed" ? result.error.slice(0, 500) : null,
       finished_at: new Date().toISOString(),
+      // Les mensurations ne servent plus une fois la tâche finie.
+      options: {},
     })
     .eq("id", id)
     .in("status", ["queued", "running"])

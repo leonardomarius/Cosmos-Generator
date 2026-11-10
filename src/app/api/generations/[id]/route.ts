@@ -1,17 +1,16 @@
-import { isModelId } from "@/config/product";
-import { FAL_REQUEST_ID, getGenerationStatus } from "@/lib/fal";
+import { GENERATION_ID } from "@/lib/generation";
 import { getWangpStatus } from "@/lib/wangp";
 
-export async function GET(request: Request, ctx: RouteContext<"/api/generations/[id]">) {
+export async function GET(_request: Request, ctx: RouteContext<"/api/generations/[id]">) {
   const { id } = await ctx.params;
-  const model = new URL(request.url).searchParams.get("model");
-  if (!FAL_REQUEST_ID.test(id) || !isModelId(model)) {
+  if (!GENERATION_ID.test(id)) {
     return Response.json({ error: "Identifiant invalide." }, { status: 400 });
   }
   try {
-    // Tâche rendue sur le PC (WanGP) : suivie dans Supabase, pas chez fal.
-    const local = await getWangpStatus(id);
-    return Response.json(local ?? (await getGenerationStatus(model, id)));
+    // Toutes les tâches sont rendues sur le PC (WanGP) et suivies dans Supabase.
+    const status = await getWangpStatus(id);
+    if (!status) return Response.json({ error: "Génération inconnue." }, { status: 404 });
+    return Response.json(status);
   } catch (err) {
     console.error(err);
     return Response.json({ error: "Statut indisponible." }, { status: 502 });

@@ -3,15 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node --env-file-if-exists=.env.local scripts/prepare-video.mjs && node scripts/prepare-web-video.mjs",
+    "predev": "node scripts/prepare-web-video.mjs",
     "dev": "next dev",
-    "prebuild": "node --env-file-if-exists=.env.local scripts/prepare-video.mjs && node scripts/prepare-web-video.mjs",
+    "prebuild": "node scripts/prepare-web-video.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
-    "@fal-ai/client": "^1.10.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.118.0",
     "ffmpeg-static": "^5.3.0",

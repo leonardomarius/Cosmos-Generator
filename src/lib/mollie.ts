@@ -21,7 +21,7 @@ import {
   type PlanId,
 } from "@/config/product";
 import { INTERVAL_MONTHS, addMonths, upgradeQuote } from "@/lib/billing-dates";
-import { publicBaseUrl } from "@/lib/fal";
+import { publicBaseUrl } from "@/lib/generation";
 import { adminClient } from "@/lib/supabase";
 import {
   blockAccountForChargeback,

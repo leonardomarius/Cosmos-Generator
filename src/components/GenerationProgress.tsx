@@ -1,4 +1,4 @@
-import type { GenerationStatus } from "@/lib/fal";
+import type { GenerationStatus } from "@/lib/generation";
 
 // Avancement d'une génération lancée avec useGeneration, puis son résultat.
 // kind : ce qui est généré, pour les textes et l'affichage du résultat.

@@ -26,10 +26,10 @@ const eur = (n) => `${n.toFixed(2)} €`;
 const usd = (n) => `${n.toFixed(2)} $`;
 const failures = [];
 
-// Grille de prix : tokens et coût fal de chaque service (coûts donnés pour
+// Grille de prix : tokens et coût de référence (ancien tarif fal) de chaque service (coûts donnés pour
 // 100 tokens, plus lisibles qu'au token).
 console.log(
-  `Règle : 100 tokens couvrent au plus ${usd(TOKEN_USD * 100)} de coût fal, prix arrondi aux ${PRICE_STEP_TOKENS} tokens supérieurs.\n`,
+  `Règle : 100 tokens couvrent au plus ${usd(TOKEN_USD * 100)} de coût de référence, prix arrondi aux ${PRICE_STEP_TOKENS} tokens supérieurs.\n`,
 );
 const grid = [];
 for (const id of Object.keys(MODELS)) {
@@ -37,7 +37,7 @@ for (const id of Object.keys(MODELS)) {
   for (const seconds of durations) {
     grid.push({
       Service: MODELS[id].label + (seconds ? ` ${seconds} s` : ""),
-      "Coût fal": usd(costUsd(id, seconds)),
+      "Coût de référence": usd(costUsd(id, seconds)),
       Tokens: tokensFor(id, seconds),
       "Coût pour 100 tokens": usd((costUsd(id, seconds) / tokensFor(id, seconds)) * 100),
     });

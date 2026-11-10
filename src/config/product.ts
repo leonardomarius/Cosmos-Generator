@@ -10,90 +10,38 @@ export const PRODUCT = {
   referenceVideoPath: "/exemple.mp4",
 } as const;
 
-// Cinq services, chacun en un seul appel à fal.ai (les effets saisonniers,
-// sans IA à chaque commande, sont dans src/config/effects.ts) :
-// - image : prompt du client, avec ou sans images (Nano Banana 2.1) ;
-// - prompt : vidéo à partir du prompt seul (Kling 4.0) ;
-// - promptImages : vidéo à partir du prompt et d'images (Kling 4.0) ;
-// - kling4 : vidéo de référence, où la star est remplacée par la personne
-//   des photos, avec un prompt fixe (Kling 4.0). Son identifiant reste
-//   "kling4" : il est enregistré dans les générations déjà lancées ;
-// - statue : vidéo du sculpteur, où seul le visage de la statue prend celui
-//   de la personne des photos (Kling 4.0).
+// Cinq services, tous rendus sur le PC par WanGP (presets du planificateur ;
+// les effets saisonniers, sans IA à chaque commande, sont dans
+// src/config/effects.ts) : image, prompt (vidéo par prompt), promptImages
+// (vidéo par prompt et images), kling4 (vidéo de star : identifiant gardé, il
+// est enregistré dans les générations déjà lancées) et statue.
 
-// Star de la vidéo de référence, telle qu'on la voit à l'écran : la nommer
-// évite que le modèle remplace un garde du corps ou un fan. À mettre à jour
-// si la vidéo change.
-const REFERENCE_STAR =
-  "the young man with brown wavy hair and a thick mustache, wearing a black jacket over a white t-shirt, dark trousers and white sneakers, who steps out of the black SUV and walks between the bodyguards to the restaurant";
-
-// Prompt fixe, identique pour chaque client. "@Video1" et "@Element1" sont
-// la façon dont Kling désigne la vidéo et la personne des photos.
-// Le proche remplace la star entièrement, visage et corps : rien du visage,
-// de la moustache ou des cheveux d'origine ne doit rester.
-// La tenue de star (veste noire, t-shirt blanc) est gardée : elle fait l'effet
-// "célébrité" et convient à tout le monde, quelle que soit la photo envoyée.
-// Visage : on demande un visage net et sans déformation, surtout quand la
-// star passe face à la caméra, sans toucher au mouvement.
-const REPLACE_PROMPT = [
-  `Replace ${REFERENCE_STAR} in @Video1 with @Element1, the whole person from head to toe.`,
-  "Keep every movement, the timing, the handheld camera motion, the bodyguards, the crowd of fans, the background and the lighting exactly as in the original video.",
-  "The new person must look exactly like the reference photos in every frame: same face, hairstyle, hair color, skin tone, facial hair, height, body build and proportions. Do not keep the face, mustache or hair of the original man unless the reference photos have them.",
-  "Keep the same outfit: black jacket, white t-shirt, dark trousers and white sneakers.",
-  "Keep the face clearly visible and recognizable, especially when the person walks toward the camera and smiles.",
-  "Photorealistic, natural skin texture, sharp and detailed face with no warping.",
-].join(" ");
-
-// Prompt fixe de la statue : uniquement le visage. Le corps reste celui de la
-// vidéo, quelle que soit la personne : torse nu en gros plan, avec une main
-// posée dessus, il ne doit jamais prendre la morphologie d'une personne réelle.
-// Le matériau est nommé et répété : le risque est un visage de chair.
-const STATUE_PROMPT = [
-  "In @Video1, resculpt only the face of the large marble statue so that it has the likeness of @Element1.",
-  "@Element1 gives only the facial identity: its frontal image shows the face from the front, its reference image shows the same face in profile.",
-  "Change only the head of the statue: face shape, facial features, facial hair and hairstyle, all carved in stone.",
-  "The new face stays white Carrara marble in every frame, the same matte stone as the rest of the statue: blank sculpted eyes with no colored iris, no skin, no makeup, no real hair. It is an elegant Italian Renaissance sculpture in the style of Michelangelo.",
-  "Keep everything else exactly as in @Video1: the neck, torso, pose, proportions and rough unfinished stone of the statue, the sculptor, his hands and tools, the workshop, the light rays, the dust, every cut, the timing and the camera motion.",
-  "The statue never moves. The face stays sharp and recognizable from every angle, with no warping.",
-  "Ambient workshop sounds only, no voices or speech.",
-].join(" ");
-
-// Prix en tokens : 1 token couvre au plus TOKEN_USD de coût fal (la statue, la
-// plus coûteuse, est à ce plafond), et chaque prix est arrondi aux 5 tokens
+// Prix en tokens : 1 token couvre au plus TOKEN_USD de coût de référence
+// (ancien tarif fal, gardé comme base des prix ; la statue, la plus coûteuse,
+// est à ce plafond), et chaque prix est arrondi aux 5 tokens
 // supérieurs. Les autres prix sont calés sur l'Essentiel : 2 vidéos par mois,
 // soit 1 375 tokens pour 10 s, les autres durées et l'image en proportion.
 // Marges par offre et par taux d'utilisation : scripts/economics.mjs.
 export const TOKEN_USD = 0.0026;
 export const PRICE_STEP_TOKENS = 5;
 
-// Résolution de toutes les vidéos générées. Les tarifs ci-dessous sont ceux
-// du 720p : le 1080p coûte 50 % de plus (0,235 $/s, 0,141 $/s en
-// video-to-video) et ferait passer les marges sous l'objectif.
-export const VIDEO_RESOLUTION = "720p";
-
-// Tarifs fal (pages des modèles, novembre 2026), en 720p pour les vidéos.
+// Coûts de référence : anciens tarifs fal (novembre 2026, 720p), qui servent
+// toujours de base aux prix en tokens et à scripts/economics.mjs.
 export const MODELS = {
   image: {
     label: "Image",
     kind: "image",
-    falModel: "fal-ai/nano-banana-2.1",
-    // Même modèle quand le client ajoute des images.
-    falEditModel: "fal-ai/nano-banana-2.1/edit",
-    // fal n'affiche pas son prix : 0,0336 $ chez Google en 1K, plus la marge
-    // habituelle de fal. À confirmer sur la première facture.
     usdPerImage: 0.04,
     tokens: 60,
   },
   prompt: {
     label: "Vidéo",
     kind: "video",
-    falModel: "kling/v4/text-to-video",
     usdPerSecond: 0.157,
   },
   promptImages: {
     label: "Vidéo avec images",
     kind: "video",
-    falModel: "kling/v4/reference-to-video",
     usdPerSecond: 0.157,
   },
   // Photos du client, dans l'ordre demandé par le formulaire :
@@ -102,10 +50,6 @@ export const MODELS = {
   kling4: {
     label: "Vidéo de référence",
     kind: "video",
-    falModel: "kling/v4/video-to-video/edit",
-    // Un "élément" Kling : la vue de face en pied (photo 1), et le gros plan
-    // du visage (photo 2) en référence, ou la photo 1 à défaut.
-    prompt: REPLACE_PROMPT,
     // 0,094 $/s facturé sur l'entrée + la sortie : 0,188 $ par seconde produite.
     usdPerSecond: 0.188,
     // Gratuit depuis le 2026-11-10, à la demande du fondateur : la vidéo de star
@@ -116,8 +60,6 @@ export const MODELS = {
   statue: {
     label: "Vidéo de statue",
     kind: "video",
-    falModel: "kling/v4/video-to-video/edit",
-    prompt: STATUE_PROMPT,
     // Même tarif que la vidéo de référence ; la vidéo du sculpteur dure 18,93 s.
     usdPerSecond: 0.188,
     seconds: 19,
@@ -146,7 +88,7 @@ export function isAspectRatio(value: unknown): value is AspectRatio {
   return ASPECT_RATIOS.includes(value as AspectRatio);
 }
 
-// Coût fal d'une génération, en dollars. "seconds" : durée de la vidéo par
+// Coût de référence d'une génération, en dollars. "seconds" : durée de la vidéo par
 // prompt (ignorée pour une image et pour les vidéos de référence).
 export function costUsd(model: ModelId, seconds?: VideoDuration): number {
   const spec = MODELS[model];
@@ -163,7 +105,7 @@ export function costUsd(model: ModelId, seconds?: VideoDuration): number {
 const PROMPT_VIDEO_TOKENS: Record<VideoDuration, number> = { 5: 695, 10: 1375, 15: 2070, 20: 2750 };
 
 // Prix pour le client, en tokens : fixé ci-dessus ou dans MODELS, sinon déduit
-// du coût fal (le petit epsilon évite qu'une erreur d'arrondi des flottants
+// du coût de référence (le petit epsilon évite qu'une erreur d'arrondi des flottants
 // ajoute 5 tokens).
 export function tokensFor(model: ModelId, seconds?: VideoDuration): number {
   if (model === "prompt" || model === "promptImages") return PROMPT_VIDEO_TOKENS[seconds ?? VIDEO_DURATIONS[0]];
@@ -264,9 +206,6 @@ export function isPlanId(value: unknown): value is PlanId {
 export const GENERATION = {
   // Délai entre deux vérifications de l'avancement (côté navigateur).
   pollIntervalMs: 5000,
-  // Durée de validité du jeton placé dans l'URL du webhook fal : file
-  // d'attente + génération + renvois du webhook par fal (1 h maximum).
-  webhookTokenMaxAgeHours: 24,
 } as const;
 
 // Adresse où le client reçoit sa vidéo (et l'email d'excuse si ça échoue).

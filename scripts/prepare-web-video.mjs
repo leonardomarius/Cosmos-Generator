@@ -1,6 +1,6 @@
 // Copie légère de la vidéo d'exemple pour l'accueil, à chaque `npm run dev`
 // et `npm run build`. public/exemple.mp4 (1080×1920 à 18 Mb/s, ~23 Mo) reste
-// la source envoyée à fal, intacte. La copie garde sa définition, sans le
+// la source, intacte. La copie garde sa définition, sans le
 // son (la vidéo est muette sur l'accueil), et pèse ~4 fois moins ; son affiche
 // (la première image) s'affiche pendant le chargement.
 // Refaite seulement quand exemple.mp4 change : son empreinte est rangée dans

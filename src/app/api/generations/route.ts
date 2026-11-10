@@ -8,7 +8,7 @@ import {
   tokensFor,
 } from "@/config/product";
 import { readBodyMeasurements } from "@/lib/body-measurements";
-import { ContentRefusedError, startGeneration, type GenerationRequest } from "@/lib/fal";
+import type { GenerationRequest } from "@/lib/generation";
 import { currentUser } from "@/lib/supabase";
 import { AccountBlockedError, InsufficientTokensError, markGenerationQueued, reserveGeneration, settleGeneration } from "@/lib/tokens";
 import { handledByWangp, startWangpGeneration } from "@/lib/wangp";
@@ -74,11 +74,16 @@ function readRequest(form: FormData): GenerationRequest | Invalid {
   return { model, prompt, photos, duration, aspectRatio };
 }
 
-// Lance une génération (image, vidéo par prompt ou vidéo de référence) sur
-// le compte fal.ai de FAL_KEY. Réservé aux comptes connectés : le prix en
-// tokens est retiré avant l'appel à fal, et rendu si la génération échoue.
+// Lance une génération (image, vidéo par prompt, star ou statue) dans la file
+// du PC (WanGP). Réservé aux comptes connectés : le prix en tokens est retiré
+// avant la mise en file, et rendu si la génération échoue.
 // Le résultat est envoyé à l'email du compte.
 export async function POST(request: Request) {
+  // Sans pont vers le PC, aucune génération n'est possible (et aucun token retiré).
+  if (!handledByWangp()) {
+    console.error("WANGP_BRIDGE_SECRET manquant : génération refusée.");
+    return Response.json({ error: "Les générations sont momentanément indisponibles." }, { status: 503 });
+  }
   const user = await currentUser();
   if (!user?.email) {
     return Response.json({ error: "Connecte-toi pour générer." }, { status: 401 });
@@ -108,10 +113,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Toutes les générations passent par le PC (WanGP) quand le pont est configuré.
-    const started = handledByWangp()
-      ? await startWangpGeneration(req, user.email, generationId)
-      : await startGeneration(req, user.email);
+    const started = await startWangpGeneration(req, user.email, generationId);
     await markGenerationQueued(generationId, started.requestId).catch((err) => {
       // La génération est lancée : la requête réussit quand même, mais sans ce
       // lien un échec ultérieur ne pourra pas rendre les tokens.
@@ -121,12 +123,6 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error(err);
     await settleGeneration({ id: generationId }, "failed").catch(console.error);
-    if (err instanceof ContentRefusedError) {
-      return Response.json(
-        { error: "Refusé par le filtre du modèle (visage de célébrité, nudité…). Essaie une autre image ou une autre description." },
-        { status: 422 },
-      );
-    }
     return Response.json({ error: "Impossible de lancer la génération." }, { status: 502 });
   }
 }

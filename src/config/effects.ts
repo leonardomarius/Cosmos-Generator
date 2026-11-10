@@ -15,7 +15,7 @@ export type Effect = {
   pitch: string;
   // Aperçu muet affiché sur l'accueil (scripts/prepare-santa-teaser.mjs).
   preview: { video: string; poster: string };
-  // Prix fixe : aucune IA par commande, il ne dépend pas d'un coût fal.
+  // Prix fixe : aucune IA par commande, il ne dépend pas d'un coût de génération.
   tokens: number;
   // Achat à l'unité, sans abonnement ni tokens (src/lib/video-purchases.ts).
   priceEur: number;

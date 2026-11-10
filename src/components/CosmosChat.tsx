@@ -24,7 +24,7 @@ import {
   type DraftPhoto,
   type GenerationKind,
 } from "@/lib/chat-draft";
-import type { GenerationStatus } from "@/lib/fal";
+import type { GenerationStatus } from "@/lib/generation";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
 import { SuspendedText } from "@/components/AccountNotices";
 import { GenerationProgress } from "@/components/GenerationProgress";

@@ -26,7 +26,7 @@ type Kind = "image" | "video";
 export const ASPECT_LABELS: Record<AspectRatio, string> = { "9:16": "Portrait", "16:9": "Paysage", "1:1": "Carré" };
 
 // Générateur de l'accueil : une image ou une vidéo à partir d'un prompt,
-// avec ou sans images. Le service fal dépend du choix :
+// avec ou sans images. Le service dépend du choix :
 // image → "image" ; vidéo sans image → "prompt" ; vidéo avec images → "promptImages".
 // email : celui du compte (null si non connecté) ; balance : solde de tokens.
 export function PromptStudio({

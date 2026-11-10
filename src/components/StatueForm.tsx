@@ -9,7 +9,7 @@ import { useGeneration } from "@/components/useGeneration";
 
 type Photo = { file: File; preview: string };
 
-// L'ordre compte : fal reçoit la vue de face puis la vue de profil.
+// L'ordre compte : le PC reçoit la vue de face puis la vue de profil.
 const SLOTS = [
   { title: "Visage de face", hint: "Net, bien éclairé, regard vers l'objectif" },
   { title: "Visage de profil", hint: "La même personne, tournée sur le côté" },

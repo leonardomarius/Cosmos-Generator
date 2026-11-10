@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GENERATION, type ModelId } from "@/config/product";
-import type { GenerationStatus } from "@/lib/fal";
+import type { GenerationStatus } from "@/lib/generation";
 
 // Lancement d'une génération (POST /api/generations) puis suivi de son
 // avancement jusqu'au résultat. Partagé par tous les formulaires.

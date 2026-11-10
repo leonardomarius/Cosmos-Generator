@@ -1,7 +1,7 @@
 // Envoi des emails au client via l'API REST de Resend, uniquement côté serveur.
-// Chaque email porte une clé d'idempotence : si fal renvoie le même webhook,
+// Chaque email porte une clé d'idempotence : si le même envoi est relancé,
 // Resend renvoie la réponse du premier envoi sans renvoyer l'email (Resend garde
-// ces clés 24 h, fal arrête ses renvois au bout d'1 h).
+// ces clés 24 h).
 import { MODELS, PRODUCT, supportEmail, type BillingInterval, type ModelId } from "@/config/product";
 
 function escapeHtml(text: string) {
@@ -58,7 +58,7 @@ async function sendEmail(params: {
     }),
   });
   // En cas d'échec (y compris un envoi identique encore en cours, 409),
-  // l'erreur fait répondre le webhook en 500 : fal le renverra plus tard.
+  // l'erreur remonte à l'appelant.
   if (!res.ok) throw new Error(`Resend a refusé l'email (${res.status}) : ${await res.text()}`);
 }
 
