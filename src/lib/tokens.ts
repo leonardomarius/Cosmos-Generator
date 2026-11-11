@@ -168,19 +168,48 @@ export async function blockAccountForChargeback(userId: string, ref: string) {
 }
 
 // Crée la génération et retire ses tokens. Renvoie son identifiant.
-export async function reserveGeneration(userId: string, model: string, tokens: number): Promise<string> {
+// idempotencyKey : clé tirée par le navigateur pour cette demande. Si elle a
+// déjà été reçue (double clic), la génération existante est renvoyée avec
+// replayed = true, sans rien retirer.
+export async function reserveGeneration(
+  userId: string,
+  model: string,
+  tokens: number,
+  idempotencyKey: string | null = null,
+): Promise<{ id: string; replayed: boolean }> {
+  const db = adminClient();
+  const existing = async () => {
+    if (!idempotencyKey) return null;
+    const { data, error } = await db
+      .from("generations")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("idempotency_key", idempotencyKey)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? { id: data.id, replayed: true } : null;
+  };
+  const replay = await existing();
+  if (replay) return replay;
+
   // Recharge l'annuel et remet à 0 le solde d'un abonnement terminé avant de
   // le dépenser.
   const account = await getAccount(userId);
   if (account.blocked) throw new AccountBlockedError();
   if (account.balance < tokens) throw new InsufficientTokensError();
-  const db = adminClient();
   const { data, error } = await db
     .from("generations")
-    .insert({ user_id: userId, model, tokens })
+    .insert({ user_id: userId, model, tokens, idempotency_key: idempotencyKey })
     .select("id")
     .single();
-  if (error) throw error;
+  if (error) {
+    // Deux requêtes identiques simultanées : l'index unique n'en garde qu'une.
+    if (error.code === "23505") {
+      const raced = await existing();
+      if (raced) return raced;
+    }
+    throw error;
+  }
   const generationId = data.id;
 
   const spent = await db.rpc("spend_tokens", { p_user: userId, p_amount: tokens, p_generation: generationId });
@@ -190,7 +219,7 @@ export async function reserveGeneration(userId: string, model: string, tokens: n
     if (spent.error.message.includes("insufficient_tokens")) throw new InsufficientTokensError();
     throw spent.error;
   }
-  return generationId;
+  return { id: generationId, replayed: false };
 }
 
 export async function markGenerationQueued(generationId: string, falRequestId: string) {
@@ -219,4 +248,15 @@ export async function settleGeneration(where: { id: string } | { falRequestId: s
     const refund = await db.rpc("refund_generation", { p_generation: generationId });
     if (refund.error) throw refund.error;
   }
+}
+
+// Le compte a-t-il déjà payé (abonnement ou achat) ? Les tokens de bienvenue
+// ne comptent pas. En cas de doute, oui : un client n'est jamais relégué.
+export async function hasPaid(userId: string): Promise<boolean> {
+  const { data, error } = await adminClient().rpc("user_has_paid", { p_user: userId });
+  if (error) {
+    console.error("Statut de paiement illisible", error);
+    return true;
+  }
+  return data === true;
 }

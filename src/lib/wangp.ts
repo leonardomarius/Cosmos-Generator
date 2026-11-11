@@ -38,15 +38,21 @@ export function isBridgeRequest(request: Request): boolean {
   return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-function emailsEnabled(): boolean {
+// Ordre de passage sur le PC : les clients qui ont déjà payé avant les comptes
+// qui n'ont que des tokens offerts.
+export const PRIORITY = { paid: 0, free: 1 } as const;
+
+export function emailsEnabled(): boolean {
   return Boolean(process.env.PUBLIC_BASE_URL) || process.env.NODE_ENV === "production";
 }
 
 // Met la génération dans la file du PC. L'identifiant de la génération sert de request id.
+// free : compte qui n'a jamais payé, sa génération passe après celles des clients.
 export async function startWangpGeneration(
   req: GenerationRequest,
   email: string,
   generationId: string,
+  { free = false }: { free?: boolean } = {},
 ): Promise<{ requestId: string; emailNotification: boolean }> {
   const bucket = await videosBucket();
   const photos = "photos" in req ? req.photos : [];
@@ -67,6 +73,7 @@ export async function startWangpGeneration(
     aspect_ratio: "aspectRatio" in req ? req.aspectRatio : null,
     options: req.model === "kling4" ? { measurements: req.measurements } : {},
     photos: paths,
+    priority: free ? PRIORITY.free : PRIORITY.paid,
   });
   if (error) throw error;
   return { requestId: generationId, emailNotification: emailsEnabled() };
@@ -129,20 +136,36 @@ export async function getWangpStatus(id: string): Promise<GenerationStatus | nul
   const db = adminClient();
   const { data: job, error } = await db
     .from("wangp_jobs")
-    .select("status, result_path, created_at")
+    .select("status, result_path, created_at, priority")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
-  if (!job) return null;
+  if (!job) return startingStatus(id);
   if (job.status === "running") return { status: "running" };
   if (job.status === "done" && job.result_path) return { status: "done", url: await signedVideoUrl(job.result_path) };
   if (job.status === "failed") return { status: "failed", error: "La vidéo n'a pas pu être créée. Tes tokens ont été rendus." };
-  const { count } = await db
-    .from("wangp_jobs")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "queued")
-    .lt("created_at", job.created_at);
-  return { status: "queued", position: count ?? null };
+  // Devant elle : les tâches plus prioritaires, puis celles de même priorité arrivées avant.
+  const [higher, earlier] = await Promise.all([
+    db.from("wangp_jobs").select("id", { count: "exact", head: true }).eq("status", "queued").lt("priority", job.priority),
+    db
+      .from("wangp_jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "queued")
+      .eq("priority", job.priority)
+      .lt("created_at", job.created_at),
+  ]);
+  if (higher.error || earlier.error) return { status: "queued", position: null };
+  return { status: "queued", position: (higher.count ?? 0) + (earlier.count ?? 0) };
+}
+
+// Génération créée mais pas encore dans la file (photos en cours d'envoi,
+// ou requête rejouée par un double clic) : en attente, ou échouée.
+async function startingStatus(id: string): Promise<GenerationStatus | null> {
+  const { data, error } = await adminClient().from("generations").select("status").eq("id", id).maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  if (data.status === "failed") return { status: "failed", error: "La génération n'a pas pu être lancée." };
+  return { status: "queued", position: null };
 }
 
 // Donne au PC la plus ancienne tâche en attente, avec des liens vers les images.
@@ -153,6 +176,7 @@ export async function claimNextJob() {
     .from("wangp_jobs")
     .select("id")
     .eq("status", "queued")
+    .order("priority")
     .order("created_at")
     .limit(1)
     .maybeSingle();

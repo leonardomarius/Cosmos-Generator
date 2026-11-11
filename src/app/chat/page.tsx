@@ -3,7 +3,7 @@ import { ViewTransition } from "react";
 import { CosmosChat, type ChatAccount } from "@/components/CosmosChat";
 import { supportEmail } from "@/config/product";
 import { currentUser } from "@/lib/supabase";
-import { getAccount } from "@/lib/tokens";
+import { getAccount, hasPaid } from "@/lib/tokens";
 
 export const metadata: Metadata = { title: "Chat" };
 
@@ -22,6 +22,11 @@ export default function ChatPage() {
 async function loadAccount(): Promise<ChatAccount | null> {
   const user = await currentUser();
   if (!user?.email) return null;
-  const account = await getAccount(user.id);
-  return { email: user.email, balance: account.balance, suspendedContact: account.blocked ? supportEmail() : null };
+  const [account, paid] = await Promise.all([getAccount(user.id), hasPaid(user.id)]);
+  return {
+    email: user.email,
+    balance: account.balance,
+    suspendedContact: account.blocked ? supportEmail() : null,
+    upsell: !paid,
+  };
 }

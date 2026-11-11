@@ -28,16 +28,19 @@ export const ASPECT_LABELS: Record<AspectRatio, string> = { "9:16": "Portrait", 
 // Générateur de l'accueil : une image ou une vidéo à partir d'un prompt,
 // avec ou sans images. Le service dépend du choix :
 // image → "image" ; vidéo sans image → "prompt" ; vidéo avec images → "promptImages".
-// email : celui du compte (null si non connecté) ; balance : solde de tokens.
+// email : celui du compte (null si non connecté) ; balance : solde de tokens ;
+// upsell : compte qui n'a jamais payé, l'offre payante suit le résultat.
 export function PromptStudio({
   email,
   balance,
   suspendedContact = null,
+  upsell = false,
 }: {
   email: string | null;
   balance: number;
   // Compte bloqué : l'adresse de contact à afficher à la place du solde.
   suspendedContact?: string | null;
+  upsell?: boolean;
 }) {
   const [kind, setKind] = useState<Kind>("video");
   const [prompt, setPrompt] = useState("");
@@ -268,7 +271,7 @@ export function PromptStudio({
       )}
 
       {starting && <p className="text-center text-base text-secondary sm:text-sm">Envoi…</p>}
-      <GenerationProgress kind={kind} generation={generation} notifiedEmail={notifiedEmail} />
+      <GenerationProgress kind={kind} generation={generation} notifiedEmail={notifiedEmail} upsell={upsell} />
     </form>
   );
 }

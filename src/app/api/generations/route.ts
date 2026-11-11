@@ -7,12 +7,23 @@ import {
   isVideoDuration,
   tokensFor,
 } from "@/config/product";
+import { RATE_LIMITS } from "@/config/promo";
 import { readBodyMeasurements } from "@/lib/body-measurements";
 import { checkPrompt } from "@/lib/content-filter";
 import type { GenerationRequest } from "@/lib/generation";
+import { allowRequest, ipFingerprint } from "@/lib/request-guard";
 import { currentUser } from "@/lib/supabase";
-import { AccountBlockedError, InsufficientTokensError, markGenerationQueued, reserveGeneration, settleGeneration } from "@/lib/tokens";
-import { handledByWangp, startWangpGeneration } from "@/lib/wangp";
+import {
+  AccountBlockedError,
+  InsufficientTokensError,
+  hasPaid,
+  markGenerationQueued,
+  reserveGeneration,
+  settleGeneration,
+} from "@/lib/tokens";
+import { emailsEnabled, handledByWangp, startWangpGeneration } from "@/lib/wangp";
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Invalid = { error: string };
 
@@ -78,12 +89,19 @@ function readRequest(form: FormData): GenerationRequest | Invalid {
 // Lance une génération (image, vidéo par prompt, star ou statue) dans la file
 // du PC (WanGP). Réservé aux comptes connectés : le prix en tokens est retiré
 // avant la mise en file, et rendu si la génération échoue.
+// Les comptes qui n'ont jamais payé (tokens de bienvenue seulement) passent
+// après les clients dans la file du PC.
+// idempotencyKey : une même demande reçue deux fois ne crée qu'une génération.
 // Le résultat est envoyé à l'email du compte.
 export async function POST(request: Request) {
   // Sans pont vers le PC, aucune génération n'est possible (et aucun token retiré).
   if (!handledByWangp()) {
     console.error("WANGP_BRIDGE_SECRET manquant : génération refusée.");
     return Response.json({ error: "Les générations sont momentanément indisponibles." }, { status: 503 });
+  }
+  const ipHash = ipFingerprint(request);
+  if (ipHash && !(await allowRequest(`generations:${ipHash}`, RATE_LIMITS.generations))) {
+    return Response.json({ error: "Trop de demandes : réessaie dans quelques minutes." }, { status: 429 });
   }
   const user = await currentUser();
   if (!user?.email) {
@@ -102,10 +120,17 @@ export async function POST(request: Request) {
     if (refused) return Response.json({ error: refused }, { status: 400 });
   }
 
-  const tokens = tokensFor(req.model, "duration" in req ? req.duration : undefined);
+  const key = String(form.get("idempotencyKey") ?? "");
+  const idempotencyKey = UUID.test(key) ? key : null;
+  const seconds = "duration" in req ? req.duration : undefined;
   let generationId: string;
   try {
-    generationId = await reserveGeneration(user.id, req.model, tokens);
+    const reserved = await reserveGeneration(user.id, req.model, tokensFor(req.model, seconds), idempotencyKey);
+    // Demande déjà reçue : la génération existe, on renvoie la même.
+    if (reserved.replayed) {
+      return Response.json({ requestId: reserved.id, emailNotification: emailsEnabled() });
+    }
+    generationId = reserved.id;
   } catch (err) {
     if (err instanceof AccountBlockedError) {
       return Response.json({ error: accountSuspendedMessage() }, { status: 403 });
@@ -118,7 +143,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const started = await startWangpGeneration(req, user.email, generationId);
+    const started = await startWangpGeneration(req, user.email, generationId, { free: !(await hasPaid(user.id)) });
     await markGenerationQueued(generationId, started.requestId).catch((err) => {
       // La génération est lancée : la requête réussit quand même, mais sans ce
       // lien un échec ultérieur ne pourra pas rendre les tokens.

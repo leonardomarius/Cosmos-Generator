@@ -3,12 +3,13 @@ import type { ReactNode } from "react";
 import { SuspendedNotice } from "@/components/AccountNotices";
 import { supportEmail } from "@/config/product";
 import { currentUser } from "@/lib/supabase";
-import { getAccount, hasActiveSubscription } from "@/lib/tokens";
+import { getAccount, hasActiveSubscription, hasPaid } from "@/lib/tokens";
 
 // Un formulaire de génération n'apparaît qu'aux comptes connectés qui ont des
 // tokens (ou un abonnement en cours, pour voir leur solde même à 0).
 // next : page où revenir après la connexion ; what : ce que le client va créer.
 // tokensRequired : false si la page propose aussi un achat sans tokens.
+// upsell : le compte n'a jamais payé, l'offre payante suit le résultat.
 export async function AccountGate({
   next,
   what,
@@ -18,13 +19,13 @@ export async function AccountGate({
   next: string;
   what: string;
   tokensRequired?: boolean;
-  children: (account: { userId: string; email: string; balance: number }) => ReactNode;
+  children: (account: { userId: string; email: string; balance: number; upsell: boolean }) => ReactNode;
 }) {
   const user = await currentUser();
   if (!user?.email) {
     return <Gate text={`Connecte-toi pour créer ${what}.`} href={`/connexion?next=${next}`} label="Se connecter" />;
   }
-  const account = await getAccount(user.id);
+  const [account, paid] = await Promise.all([getAccount(user.id), hasPaid(user.id)]);
   if (account.blocked) {
     return (
       <div className="mt-10">
@@ -41,7 +42,7 @@ export async function AccountGate({
       />
     );
   }
-  return children({ userId: user.id, email: user.email, balance: account.balance });
+  return children({ userId: user.id, email: user.email, balance: account.balance, upsell: !paid });
 }
 
 function Gate({ text, href, label }: { text: string; href: string; label: string }) {

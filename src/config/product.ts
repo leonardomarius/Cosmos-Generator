@@ -19,8 +19,10 @@ export const PRODUCT = {
 // Prix en tokens : 1 token couvre au plus TOKEN_USD de coût de référence
 // (ancien tarif fal, gardé comme base des prix ; la statue, la plus coûteuse,
 // est à ce plafond), et chaque prix est arrondi aux 5 tokens
-// supérieurs. Les autres prix sont calés sur l'Essentiel : 2 vidéos par mois,
-// soit 1 375 tokens pour 10 s, les autres durées et l'image en proportion.
+// supérieurs. Les autres prix sont calés sur l'Essentiel : 2 vidéos par mois.
+// Depuis le 2026-11-11, une vidéo de 10 s coûte autant qu'une vidéo preset
+// (star, statue) : 1 300 tokens, le montant du cadeau de bienvenue
+// (src/config/promo.ts). Les autres durées et l'image n'ont pas changé.
 // Marges par offre et par taux d'utilisation : scripts/economics.mjs.
 export const TOKEN_USD = 0.0026;
 export const PRICE_STEP_TOKENS = 5;
@@ -62,6 +64,8 @@ export const MODELS = {
     // Même tarif que la vidéo de référence ; la vidéo du sculpteur dure 18,93 s.
     usdPerSecond: 0.188,
     seconds: 19,
+    // Même prix que la vidéo de star et la vidéo de 10 s depuis le 2026-11-11.
+    tokens: 1300,
   },
 } as const;
 
@@ -101,7 +105,7 @@ export function costUsd(model: ModelId, seconds?: VideoDuration): number {
   return spec.usdPerSecond * duration;
 }
 
-const PROMPT_VIDEO_TOKENS: Record<VideoDuration, number> = { 5: 695, 10: 1375, 15: 2070, 20: 2750 };
+const PROMPT_VIDEO_TOKENS: Record<VideoDuration, number> = { 5: 695, 10: 1300, 15: 2070, 20: 2750 };
 
 // Prix pour le client, en tokens : fixé ci-dessus ou dans MODELS, sinon déduit
 // du coût de référence (le petit epsilon évite qu'une erreur d'arrondi des flottants
@@ -124,7 +128,7 @@ export function formatTokens(n: number): string {
 // utilisés ne sont pas reportés.
 // "priceEur" et "annualPriceEur" sont les montants TTC prélevés par Mollie.
 // L'Essentiel couvre 2 vidéos par mois, au choix : 10 s ou vidéos de référence,
-// statue comprise (2 × 1 375 tokens). Marges : scripts/economics.mjs.
+// statue comprise (2 × 1 300 tokens). Marges : scripts/economics.mjs.
 export const PLANS = {
   essentiel: {
     label: "Essentiel",

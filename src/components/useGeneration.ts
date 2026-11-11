@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GENERATION, type ModelId } from "@/config/product";
 import type { GenerationStatus } from "@/lib/generation";
 
@@ -16,19 +16,29 @@ export function useGeneration(email: string | null) {
   // Modèle de la génération en cours : c'est lui qu'on interroge pour le suivi.
   const [job, setJob] = useState<{ requestId: string; model: ModelId } | null>(null);
   const [generation, setGeneration] = useState<GenerationStatus | null>(null);
+  // Clé de la demande en cours d'envoi : un double clic renvoie la même, et
+  // le serveur ne crée qu'une génération.
+  const pendingKey = useRef<string | null>(null);
 
   async function start(model: ModelId, body: FormData) {
+    if (pendingKey.current) return;
+    const key = crypto.randomUUID();
+    pendingKey.current = key;
     setError(null);
     setGeneration(null);
     setNotifiedEmail(null);
     setStarting(true);
     body.append("model", model);
-    const res = await fetch("/api/generations", { method: "POST", body });
-    const data = await res.json().catch(() => ({ error: "Impossible de lancer la génération." }));
+    body.append("idempotencyKey", key);
+    const res = await fetch("/api/generations", { method: "POST", body }).catch(() => null);
+    const data = res
+      ? await res.json().catch(() => ({ error: "Impossible de lancer la génération." }))
+      : { error: "Connexion perdue : vérifie ton réseau et réessaie." };
+    pendingKey.current = null;
     setStarting(false);
     // Tokens retirés (ou rendus après un échec) : on relit le solde.
     router.refresh();
-    if (!res.ok) {
+    if (!res?.ok) {
       setError(data.error);
       return;
     }

@@ -5,6 +5,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient, type User } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { connection } from "next/server";
 import type { Database } from "@/lib/database.types";
 
@@ -33,12 +34,13 @@ export async function sessionClient() {
 // Utilisateur connecté, vérifié auprès de Supabase, ou null.
 // connection() : lu à chaque requête, jamais pendant un pré-rendu (Supabase
 // lit l'heure pour vérifier la session, ce que Next refuse à ce moment-là).
-export async function currentUser(): Promise<User | null> {
+// cache : lu une seule fois par rendu, même si plusieurs parties de la page le demandent.
+export const currentUser = cache(async (): Promise<User | null> => {
   await connection();
   const supabase = await sessionClient();
   const { data } = await supabase.auth.getUser();
   return data.user;
-}
+});
 
 let admin: ReturnType<typeof createClient<Database>> | null = null;
 

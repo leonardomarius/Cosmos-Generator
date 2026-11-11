@@ -88,6 +88,7 @@ export type Database = {
           tokens: number;
           fal_request_id: string | null;
           status: string;
+          idempotency_key: string | null;
           created_at: string;
         },
         {
@@ -97,6 +98,7 @@ export type Database = {
           tokens: number;
           fal_request_id?: string | null;
           status?: string;
+          idempotency_key?: string | null;
           created_at?: string;
         }
       >;
@@ -111,6 +113,7 @@ export type Database = {
           options: Json;
           photos: string[];
           status: string;
+          priority: number;
           result_path: string | null;
           error: string | null;
           created_at: string;
@@ -127,12 +130,26 @@ export type Database = {
           options?: Json;
           photos?: string[];
           status?: string;
+          priority?: number;
           result_path?: string | null;
           error?: string | null;
           created_at?: string;
           claimed_at?: string | null;
           finished_at?: string | null;
         }
+      >;
+      promo_settings: Table<
+        { id: number; enabled: boolean; daily_budget: number | null; updated_at: string },
+        { id?: number; enabled?: boolean; daily_budget?: number | null; updated_at?: string }
+      >;
+      welcome_bonuses: Table<
+        { user_id: string; tokens: number; day: string; created_at: string },
+        { user_id: string; tokens: number; day: string; created_at?: string }
+      >;
+      welcome_daily_usage: Table<{ day: string; granted: number }, { day: string; granted?: number }>;
+      rate_limits: Table<
+        { key: string; window_start: string; hits: number },
+        { key: string; window_start: string; hits?: number }
       >;
     };
     Views: Record<never, never>;
@@ -143,6 +160,13 @@ export type Database = {
       refund_generation: { Args: { p_generation: string }; Returns: undefined };
       credit_purchased_tokens: { Args: { p_user: string; p_amount: number; p_ref: string }; Returns: number | null };
       block_account_for_chargeback: { Args: { p_user: string; p_ref: string }; Returns: boolean };
+      claim_welcome_bonus: {
+        Args: { p_user: string; p_tokens: number; p_day: string; p_budget: number };
+        Returns: number;
+      };
+      user_has_paid: { Args: { p_user: string }; Returns: boolean };
+      hit_rate_limit: { Args: { p_key: string; p_window_seconds: number; p_max: number }; Returns: boolean };
+      auth_email_exists: { Args: { p_email: string }; Returns: boolean };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;

@@ -30,7 +30,7 @@ export default function StatuePage() {
       </p>
       <Suspense fallback={<p className="mt-10 text-secondary">Chargement…</p>}>
         <AccountGate next="/statue" what="ta statue">
-          {({ email, balance }) => <StatueForm email={email} balance={balance} />}
+          {({ email, balance, upsell }) => <StatueForm email={email} balance={balance} upsell={upsell} />}
         </AccountGate>
       </Suspense>
     </div>

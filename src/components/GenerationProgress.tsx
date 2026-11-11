@@ -1,15 +1,19 @@
+import { PaidOfferCta } from "@/components/Welcome";
 import type { GenerationStatus } from "@/lib/generation";
 
 // Avancement d'une génération lancée avec useGeneration, puis son résultat.
 // kind : ce qui est généré, pour les textes et l'affichage du résultat.
+// upsell : compte qui n'a jamais payé, l'offre payante s'affiche sous le résultat.
 export function GenerationProgress({
   kind,
   generation,
   notifiedEmail,
+  upsell = false,
 }: {
   kind: "image" | "video";
   generation: GenerationStatus | null;
   notifiedEmail: string | null;
+  upsell?: boolean;
 }) {
   const what = kind === "image" ? "L'image" : "La vidéo";
   return (
@@ -59,6 +63,7 @@ export function GenerationProgress({
             className="mx-auto max-h-[80dvh] w-auto max-w-full rounded-[28px] shadow-2xl shadow-black/20"
           />
         ))}
+      {generation?.status === "done" && upsell && <PaidOfferCta />}
     </>
   );
 }

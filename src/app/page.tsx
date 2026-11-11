@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Suspense, ViewTransition } from "react";
 import { GenerationCards, ImageGenerationCard } from "@/components/GenerationCards";
+import { WelcomeSlot, WelcomeSlotPlaceholder } from "@/components/WelcomeSlot";
 import { PromptStudio } from "@/components/PromptStudio";
 import { EFFECTS } from "@/config/effects";
 import { formatTokens, supportEmail } from "@/config/product";
 import { currentUser } from "@/lib/supabase";
-import { getAccount } from "@/lib/tokens";
+import { getAccount, hasPaid } from "@/lib/tokens";
 
 // Passage au chat (14e caractère tapé, ou une carte du hero) : la page
 // s'efface vers le haut pendant que le chat arrive (globals.css).
@@ -13,6 +14,9 @@ export default function Home() {
   return (
     <ViewTransition exit={{ "to-chat": "home-exit", default: "none" }} default="none">
       <div className="mx-auto max-w-5xl px-5 pb-20 pt-14 sm:pt-20">
+        <Suspense fallback={<WelcomeSlotPlaceholder />}>
+          <WelcomeSlot />
+        </Suspense>
         <section>
           <h1 className="text-center text-display font-semibold">Imagine-le, on le génère</h1>
           <p className="mx-auto mt-6 max-w-2xl text-center text-lg leading-relaxed text-secondary sm:text-xl">
@@ -86,6 +90,13 @@ export default function Home() {
 async function StudioGate() {
   const user = await currentUser();
   if (!user?.email) return <PromptStudio email={null} balance={0} />;
-  const account = await getAccount(user.id);
-  return <PromptStudio email={user.email} balance={account.balance} suspendedContact={account.blocked ? supportEmail() : null} />;
+  const [account, paid] = await Promise.all([getAccount(user.id), hasPaid(user.id)]);
+  return (
+    <PromptStudio
+      email={user.email}
+      balance={account.balance}
+      suspendedContact={account.blocked ? supportEmail() : null}
+      upsell={!paid}
+    />
+  );
 }

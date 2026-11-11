@@ -58,7 +58,7 @@ export async function POST(request: Request) {
   try {
     const claimed = await claimVideoPurchase(user.id, SANTA_EFFECT.id);
     purchased = claimed !== null;
-    generationId = claimed ?? (await reserveGeneration(user.id, SANTA_EFFECT.id, SANTA_EFFECT.tokens));
+    generationId = claimed ?? (await reserveGeneration(user.id, SANTA_EFFECT.id, SANTA_EFFECT.tokens)).id;
   } catch (err) {
     if (err instanceof AccountBlockedError) {
       return Response.json({ error: accountSuspendedMessage() }, { status: 403 });

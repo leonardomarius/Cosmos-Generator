@@ -34,8 +34,9 @@ import { ASPECT_LABELS, Picker } from "@/components/PromptStudio";
 import { readBodyMeasurements } from "@/lib/body-measurements";
 import { useGeneration } from "@/components/useGeneration";
 
-// suspendedContact : compte bloqué, l'adresse de contact à afficher.
-export type ChatAccount = { email: string; balance: number; suspendedContact?: string | null };
+// suspendedContact : compte bloqué, l'adresse de contact à afficher ;
+// upsell : compte qui n'a jamais payé, l'offre payante suit chaque résultat.
+export type ChatAccount = { email: string; balance: number; suspendedContact?: string | null; upsell?: boolean };
 
 // État d'une réponse : celui de useGeneration, figé quand la demande suivante
 // part (le hook ne suit qu'une génération à la fois).
@@ -272,6 +273,7 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
                   kind={turn.kind}
                   outcome={turn.outcome ?? { generation, error, notifiedEmail }}
                   starting={!turn.outcome && starting}
+                  upsell={account?.upsell ?? false}
                 />
               </div>
             ))}
@@ -535,7 +537,7 @@ function UserMessage({ turn }: { turn: Turn }) {
   );
 }
 
-function Reply({ kind, outcome, starting }: { kind: GenerationKind; outcome: Outcome; starting: boolean }) {
+function Reply({ kind, outcome, starting, upsell }: { kind: GenerationKind; outcome: Outcome; starting: boolean; upsell: boolean }) {
   const { generation, error, notifiedEmail } = outcome;
   const empty = !starting && !error && !generation;
   return (
@@ -549,7 +551,12 @@ function Reply({ kind, outcome, starting }: { kind: GenerationKind; outcome: Out
           <p className="rounded-2xl border border-red-600/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">{error}</p>
         )}
         {empty && <p className="text-secondary">Demande interrompue.</p>}
-        <GenerationProgress kind={kind === "image" ? "image" : "video"} generation={generation} notifiedEmail={notifiedEmail} />
+        <GenerationProgress
+          kind={kind === "image" ? "image" : "video"}
+          generation={generation}
+          notifiedEmail={notifiedEmail}
+          upsell={upsell}
+        />
       </div>
     </div>
   );

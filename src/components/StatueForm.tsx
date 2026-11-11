@@ -16,7 +16,8 @@ const SLOTS = [
 ] as const;
 
 // Formulaire de la vidéo de la statue : deux photos du visage, rien d'autre.
-export function StatueForm({ email, balance }: { email: string; balance: number }) {
+// upsell : compte qui n'a jamais payé, l'offre payante suit le résultat.
+export function StatueForm({ email, balance, upsell = false }: { email: string; balance: number; upsell?: boolean }) {
   const cost = tokensFor("statue");
   const [photos, setPhotos] = useState<(Photo | null)[]>(SLOTS.map(() => null));
   const [consent, setConsent] = useState(false);
@@ -134,7 +135,7 @@ export function StatueForm({ email, balance }: { email: string; balance: number 
       </p>
 
       {starting && <p className="text-center text-base text-secondary sm:text-sm">Envoi des photos…</p>}
-      <GenerationProgress kind="video" generation={generation} notifiedEmail={notifiedEmail} />
+      <GenerationProgress kind="video" generation={generation} notifiedEmail={notifiedEmail} upsell={upsell} />
     </form>
   );
 }

@@ -1,9 +1,11 @@
 import { EFFECTS } from "@/config/effects";
+import { adminClient } from "@/lib/supabase";
 import { purgeOldVideos } from "@/lib/video-storage";
 import { WANGP_FOLDERS } from "@/lib/wangp";
 
 // Appelée chaque jour par Vercel Cron (vercel.json) : supprime les vidéos des
-// effets après PRODUCT.retentionDays jours, comme promis aux clients.
+// effets après PRODUCT.retentionDays jours, comme promis aux clients, et les
+// compteurs anti-abus de plus de deux jours.
 // Vercel envoie "Authorization: Bearer <CRON_SECRET>" : personne d'autre ne
 // peut déclencher la suppression.
 export async function GET(request: Request) {
@@ -13,6 +15,11 @@ export async function GET(request: Request) {
   }
   try {
     const removed = await purgeOldVideos([...EFFECTS.map((item) => item.slug), ...WANGP_FOLDERS]);
+    const limits = await adminClient()
+      .from("rate_limits")
+      .delete()
+      .lt("window_start", new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString());
+    if (limits.error) console.error("Compteurs anti-abus non purgés", limits.error);
     return Response.json({ removed });
   } catch (err) {
     console.error(err);

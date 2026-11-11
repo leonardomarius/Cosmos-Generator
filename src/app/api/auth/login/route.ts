@@ -1,4 +1,6 @@
 import { EMAIL_RULES } from "@/config/product";
+import { RATE_LIMITS } from "@/config/promo";
+import { accountExists, allowRequest, ipFingerprint, isDisposableEmail } from "@/lib/request-guard";
 import { safeNextPath, siteUrl } from "@/lib/site-url";
 import { sessionClient } from "@/lib/supabase";
 
@@ -11,6 +13,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "Adresse email invalide." }, { status: 400 });
   }
   const next = safeNextPath(body?.next, "/chat");
+
+  // Anti-abus : rafales de demandes limitées par connexion, et pas de nouveau
+  // compte avec une adresse jetable.
+  const ipHash = ipFingerprint(request);
+  if (ipHash && !(await allowRequest(`login:${ipHash}`, RATE_LIMITS.login))) {
+    return Response.json({ error: "Trop de demandes : réessaie dans quelques minutes." }, { status: 429 });
+  }
+  if (isDisposableEmail(email) && !(await accountExists(email))) {
+    return Response.json({ error: "Utilise une adresse email permanente pour créer ton compte." }, { status: 400 });
+  }
 
   const supabase = await sessionClient();
   const { error } = await supabase.auth.signInWithOtp({
