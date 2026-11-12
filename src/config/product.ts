@@ -10,6 +10,15 @@ export const PRODUCT = {
   referenceVideoPath: "/exemple.mp4",
 } as const;
 
+// Modèle annoncé au client pour chaque génération, image ou vidéo (menu
+// « Modèle » des formulaires, conversation, suivi, résultat, email), quel que
+// soit le moteur réel qui tourne sur le PC. Effets saisonniers exclus.
+// MODEL_CHOICES : choix du menu, Cosmos seul pour l'instant ; le choix n'est
+// pas envoyé au serveur.
+export const MODEL_NAME = "Cosmos";
+export const MODEL_CHOICES = [MODEL_NAME] as const;
+export type ModelChoice = (typeof MODEL_CHOICES)[number];
+
 // Cinq services, tous rendus sur le PC par WanGP (presets du planificateur ;
 // les effets saisonniers, sans IA à chaque commande, sont dans
 // src/config/effects.ts) : image, prompt (vidéo par prompt), promptImages

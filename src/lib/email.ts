@@ -2,7 +2,7 @@
 // Chaque email porte une clé d'idempotence : si le même envoi est relancé,
 // Resend renvoie la réponse du premier envoi sans renvoyer l'email (Resend garde
 // ces clés 24 h).
-import { MODELS, PRODUCT, supportEmail, type BillingInterval, type ModelId } from "@/config/product";
+import { MODEL_NAME, MODELS, PRODUCT, supportEmail, type BillingInterval, type ModelId } from "@/config/product";
 
 function escapeHtml(text: string) {
   return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -75,6 +75,7 @@ export function sendResultReadyEmail(to: string, model: ModelId, url: string, re
         : model === "statue"
           ? "Ta vidéo de statue est prête."
           : image ? "Ton image est prête." : "Ta vidéo est prête.",
+      `Modèle utilisé : ${MODEL_NAME}.`,
       `Elle reste disponible pendant ${PRODUCT.retentionDays} jours : pense à la télécharger.`,
     ],
     link: { url, label: image ? "Voir et télécharger l'image" : "Voir et télécharger la vidéo" },

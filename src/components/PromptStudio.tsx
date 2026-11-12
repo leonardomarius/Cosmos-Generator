@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import {
   ASPECT_RATIOS,
+  MODEL_CHOICES,
+  MODEL_NAME,
   PROMPT_RULES,
   UPLOAD_RULES,
   VIDEO_DURATIONS,
   formatTokens,
   tokensFor,
   type AspectRatio,
+  type ModelChoice,
   type ModelId,
   type VideoDuration,
 } from "@/config/product";
@@ -177,6 +180,7 @@ export function PromptStudio({
           prend toute la largeur, coût en dessous ; dès 640 px, une ligne. */}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-3">
         <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto [&>:last-child:nth-child(odd)]:col-span-2">
+          <ModelPicker disabled={busy} />
           <Picker
             label="Type"
             options={(["video", "image"] as const).map((k) => ({ value: k, label: k === "video" ? "Vidéo" : "Image" }))}
@@ -273,6 +277,21 @@ export function PromptStudio({
       {starting && <p className="text-center text-base text-secondary sm:text-sm">Envoi…</p>}
       <GenerationProgress kind={kind} generation={generation} notifiedEmail={notifiedEmail} upsell={upsell} />
     </form>
+  );
+}
+
+// Menu « Modèle » des générations (accueil, chat, statue ; pas les effets
+// saisonniers). Cosmos seul pour l'instant : voir MODEL_CHOICES.
+export function ModelPicker({ disabled }: { disabled: boolean }) {
+  const [model, setModel] = useState<ModelChoice>(MODEL_NAME);
+  return (
+    <Picker
+      label="Modèle"
+      options={MODEL_CHOICES.map((m) => ({ value: m, label: m }))}
+      value={model}
+      onChange={setModel}
+      disabled={disabled}
+    />
   );
 }
 

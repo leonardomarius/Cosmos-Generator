@@ -5,6 +5,7 @@ import { useState } from "react";
 import { UPLOAD_RULES, formatTokens, tokensFor } from "@/config/product";
 import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
 import { GenerationProgress } from "@/components/GenerationProgress";
+import { ModelPicker } from "@/components/PromptStudio";
 import { useGeneration } from "@/components/useGeneration";
 
 type Photo = { file: File; preview: string };
@@ -97,6 +98,13 @@ export function StatueForm({ email, balance, upsell = false }: { email: string; 
             </label>
           );
         })}
+      </div>
+
+      {/* Seul réglage du formulaire : l'intitulé dit de quoi il s'agit. Sur
+          du verre, comme le consentement : sur la fresque, il se lirait mal. */}
+      <div className="liquid-glass flex items-center justify-between gap-3 rounded-[24px] py-3 pl-5 pr-3">
+        <span className="text-base text-secondary sm:text-sm">Modèle</span>
+        <ModelPicker disabled={busy} />
       </div>
 
       {error && (

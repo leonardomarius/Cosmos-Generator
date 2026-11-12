@@ -1,4 +1,5 @@
 import { PaidOfferCta } from "@/components/Welcome";
+import { MODEL_NAME } from "@/config/product";
 import type { GenerationStatus } from "@/lib/generation";
 
 // Avancement d'une génération lancée avec useGeneration, puis son résultat.
@@ -42,7 +43,12 @@ export function GenerationProgress({
           La génération a échoué : {generation.error}
         </p>
       )}
-      {generation?.status === "done" && <p className="text-center text-xs text-tertiary">Généré par Cosmos</p>}
+      {generation && generation.status !== "failed" && (
+        <p className="text-center text-xs text-tertiary">
+          Modèle : {MODEL_NAME}
+          {generation.status === "done" && " · Généré par Cosmos"}
+        </p>
+      )}
       {generation?.status === "done" &&
         (kind === "image" ? (
           <a href={generation.url} target="_blank" rel="noopener noreferrer" className="block">

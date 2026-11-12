@@ -6,6 +6,7 @@ import { Suspense, use, useEffect, useLayoutEffect, useRef, useState } from "rea
 import {
   ASPECT_RATIOS,
   PROMPT_RULES,
+  MODEL_NAME,
   UPLOAD_RULES,
   VIDEO_DURATIONS,
   formatTokens,
@@ -30,7 +31,7 @@ import { SuspendedText } from "@/components/AccountNotices";
 import { GenerationProgress } from "@/components/GenerationProgress";
 import { Mascot } from "@/components/Mascot";
 import { MeasurementsFields, type MeasurementValues } from "@/components/MeasurementsFields";
-import { ASPECT_LABELS, Picker } from "@/components/PromptStudio";
+import { ASPECT_LABELS, ModelPicker, Picker } from "@/components/PromptStudio";
 import { readBodyMeasurements } from "@/lib/body-measurements";
 import { useGeneration } from "@/components/useGeneration";
 
@@ -209,8 +210,9 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
     }
     const text = prompt.trim() || (star ? "Vidéo de star" : "");
     const sent = photos;
-    const details = (star ? ["Vidéo de star", formatTokens(cost)] : [
+    const details = (star ? ["Vidéo de star", `Modèle ${MODEL_NAME}`, formatTokens(cost)] : [
       kind === "video" ? "Vidéo" : "Image",
+      `Modèle ${MODEL_NAME}`,
       kind === "video" && `${duration} s`,
       ASPECT_LABELS[aspectRatio],
       formatTokens(cost),
@@ -361,6 +363,7 @@ function ChatView({ account, draft }: { account: ChatAccount | null | undefined;
           )}
 
           <div className="flex flex-wrap items-center gap-2">
+            <ModelPicker disabled={busy} />
             <Picker
               label="Type"
               options={(["video", "star", "image"] as const).map((k) => ({ value: k, label: KIND_LABELS[k] }))}
