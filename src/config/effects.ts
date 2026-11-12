@@ -11,9 +11,9 @@ export type Effect = {
   slug: string;
   title: string;
   subtitle: string;
-  // Présentation sur l'accueil.
+  // Présentation sur la page des offres de Noël (/noel).
   pitch: string;
-  // Aperçu muet affiché sur l'accueil (scripts/prepare-santa-teaser.mjs).
+  // Aperçu muet affiché sur /noel (scripts/prepare-santa-teaser.mjs).
   preview: { video: string; poster: string };
   // Prix fixe : aucune IA par commande, il ne dépend pas d'un coût de génération.
   tokens: number;
