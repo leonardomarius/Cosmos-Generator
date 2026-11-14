@@ -35,7 +35,7 @@ export function GenerationCards() {
           </span>
         </div>
         <CardBody
-          title="Vidéo de star"
+          title="Star"
           text="Une photo suffit : la personne de ton choix arrive en star, entre ses gardes du corps et des fans qui la filment."
           note={formatTokens(tokensFor("kling4"))}
           icon={<path d="M8 5.5v13a.8.8 0 0 0 1.2.7l10.4-6.5a.8.8 0 0 0 0-1.4L9.2 4.8a.8.8 0 0 0-1.2.7Z" />}
@@ -60,7 +60,7 @@ export function GenerationCards() {
           </span>
         </div>
         <CardBody
-          title="Génération Historique"
+          title="Histoire"
           text="Les grands moments de l'histoire européenne, filmés : Michel-Ange sculptant la personne de votre choix, et d'autres à venir."
           note={formatTokens(tokensFor("statue"))}
           icon={<path d="M4 20h16M6 20V10M10 20V10M14 20V10M18 20V10M3.5 10h17M12 3.5 20 8H4l8-4.5Z" />}
