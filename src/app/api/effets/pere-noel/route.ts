@@ -5,6 +5,7 @@ import { checkSantaTexts } from "@/lib/santa-text";
 import { renderSantaVideo } from "@/lib/santa-video";
 import { currentUser } from "@/lib/supabase";
 import { AccountBlockedError, InsufficientTokensError, reserveGeneration, settleGeneration } from "@/lib/tokens";
+import { guestPurchase, guestVideoFile, lockGuestPurchase, releaseGuestPurchase } from "@/lib/guest-video";
 import { claimVideoPurchase } from "@/lib/video-purchases";
 import { storeVideo } from "@/lib/video-storage";
 
@@ -41,17 +42,15 @@ async function readOrder(form: FormData): Promise<SantaOrder | Invalid> {
 // Vidéo du Père Noël : aucune IA ici, la photo et la liste sont collées sur
 // la vidéo de référence (src/lib/santa-video.ts). Une vidéo achetée à l'unité
 // passe en premier ; sinon, le prix en tokens est retiré avant l'assemblage et
-// rendu s'il échoue. Un achat reste valable après un échec. La photo n'est
+// rendu s'il échoue. Sans compte, seul l'achat à l'unité est possible. Un achat reste valable après un échec. La photo n'est
 // gardée que le temps de l'assemblage ; la vidéo, PRODUCT.retentionDays jours.
 export async function POST(request: Request) {
-  const user = await currentUser();
-  if (!user?.email) {
-    return Response.json({ error: "Connecte-toi pour créer la vidéo." }, { status: 401 });
-  }
   const form = await request.formData().catch(() => null);
   if (!form) return Response.json({ error: "Requête invalide." }, { status: 400 });
   const order = await readOrder(form);
   if ("error" in order) return Response.json(order, { status: 400 });
+  const user = await currentUser();
+  if (!user?.email) return createGuestVideo(order, String(form.get("payment") ?? ""));
 
   let generationId: string;
   let purchased = false;
@@ -94,7 +93,12 @@ export async function POST(request: Request) {
   // La vidéo est prête : un incident d'enregistrement ou d'email ne doit pas
   // l'annuler (elle s'affiche sur la page de toute façon).
   await settleGeneration({ id: generationId }, "done").catch(console.error);
-  const emailNotification = await sendSantaVideoEmail(order.deliveryEmail, url, generationId).then(
+  return delivered(order, url, generationId);
+}
+
+// Vidéo prête : envoyée par email, puis affichée sur la page.
+async function delivered(order: SantaOrder, url: string, reference: string) {
+  const emailNotification = await sendSantaVideoEmail(order.deliveryEmail, url, reference).then(
     () => true,
     (err) => {
       console.error(err);
@@ -102,4 +106,44 @@ export async function POST(request: Request) {
     },
   );
   return Response.json({ url, emailNotification, emailedTo: order.deliveryEmail });
+}
+
+// Sans compte : seulement après un achat à l'unité, vérifié chez Mollie
+// (src/lib/guest-video.ts). Pas de tokens possibles.
+async function createGuestVideo(order: SantaOrder, paymentId: string) {
+  const folder = SANTA_EFFECT.slug;
+  try {
+    const purchase = await guestPurchase(SANTA_EFFECT, paymentId);
+    // Déjà créée (double envoi) : l'email est parti à la création.
+    if (purchase.state === "used") return Response.json({ url: purchase.url, emailNotification: true });
+    if (purchase.state === "pending") {
+      return Response.json({ error: "Paiement pas encore confirmé : réessaie dans un instant." }, { status: 402 });
+    }
+    if (purchase.state === "invalid") {
+      return Response.json({ error: "Aucun achat valable : paie la vidéo pour la créer." }, { status: 402 });
+    }
+    if (!(await lockGuestPurchase(folder, paymentId))) {
+      return Response.json({ error: "Ta vidéo est déjà en cours de création : patiente un instant puis recharge la page." }, { status: 409 });
+    }
+  } catch (err) {
+    console.error(err);
+    return Response.json({ error: "Impossible de créer la vidéo." }, { status: 502 });
+  }
+
+  try {
+    const video = await renderSantaVideo(SANTA_TEMPLATE, {
+      photo: Buffer.from(await order.photo.arrayBuffer()),
+      childName: order.childName,
+      gifts: order.gifts,
+    });
+    const url = await storeVideo(guestVideoFile(folder, paymentId), video);
+    return delivered(order, url, paymentId);
+  } catch (err) {
+    console.error(err);
+    await releaseGuestPurchase(folder, paymentId).catch(console.error);
+    return Response.json(
+      { error: "La vidéo n'a pas pu être créée. Ton achat reste valable : réessaie dans un instant." },
+      { status: 502 },
+    );
+  }
 }

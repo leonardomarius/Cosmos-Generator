@@ -10,8 +10,12 @@ import { checkPhoto, shrinkPhoto } from "@/lib/photo-upload";
 import { clearSantaDraft, loadSantaDraft, saveSantaDraft } from "@/lib/santa-draft";
 
 type Photo = { file: File; preview: string };
-// emailedTo : adresse où la vidéo est partie, null si l'envoi a échoué.
-type Result = { url: string; emailedTo: string | null };
+// emailedTo : adresse où la vidéo est partie, null si l'envoi a échoué ;
+// earlier : vidéo déjà créée et envoyée lors d'une visite précédente.
+type Result = { url: string; emailedTo: string | null; earlier?: boolean };
+// Client sans compte : paymentId, son achat à l'unité (null si aucun achat
+// valable) ; createdUrl, la vidéo déjà créée avec cet achat.
+type Guest = { paymentId: string | null; createdUrl: string | null };
 
 const GIFT_EXAMPLES = ["Un vélo rouge", "Une boîte de LEGO", "Un déguisement de pompier", "Un livre de dinosaures"];
 
@@ -28,11 +32,24 @@ const CONFIRM_POLL_MAX = 10;
 // paiement (src/lib/santa-draft.ts) et la vidéo se crée à son retour. Elle est
 // assemblée tout de suite par le serveur (pas de file d'attente), puis affichée
 // ici et envoyée par email.
-// email : celui du compte ; balance : solde de tokens ; purchases : vidéos
-// achetées à l'unité et pas encore créées.
-export function SantaForm({ email, balance, purchases }: { email: string; balance: number; purchases: number }) {
+// email : celui du compte, null sans compte ; balance : solde de tokens ;
+// purchases : vidéos achetées à l'unité et pas encore créées.
+export function SantaForm({
+  email,
+  balance,
+  purchases,
+  guest,
+}: {
+  email: string | null;
+  balance: number;
+  purchases: number;
+  guest?: Guest;
+}) {
   const router = useRouter();
-  const returnedFromPayment = useSearchParams().get("achat") === "ok";
+  // Sans compte, un retour de Mollie sans achat valable (paiement annulé) n'est
+  // pas un paiement en attente : le formulaire revient tout de suite.
+  const returnedFromPayment = useSearchParams().get("achat") === "ok" && (!guest || guest.paymentId !== null);
+  const draftOwner = email ?? "sans-compte";
   const cost = SANTA_EFFECT.tokens;
   const [buying, setBuying] = useState(false);
   const [polls, setPolls] = useState(0);
@@ -46,13 +63,17 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
   const [restored, setRestored] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<Result | null>(null);
+  const [result, setResult] = useState<Result | null>(
+    guest?.createdUrl ? { url: guest.createdUrl, emailedTo: null, earlier: true } : null,
+  );
+  // La création automatique au retour du paiement n'est tentée qu'une fois.
+  const [autoTried, setAutoTried] = useState(false);
 
   const paid = purchases > 0;
   const waitingForPayment = returnedFromPayment && !paid && !result;
   const confirming = waitingForPayment && polls < CONFIRM_POLL_MAX;
   // De retour du paiement avec sa commande : la vidéo se crée sans autre clic.
-  const autoCreate = returnedFromPayment && paid && restored && !busy && !result;
+  const autoCreate = returnedFromPayment && paid && restored && !busy && !result && !autoTried;
   const preparing = busy || autoCreate;
   const draftLost = returnedFromPayment && paid && draftChecked && !restored && !photo && !preparing && !result;
 
@@ -71,7 +92,7 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
 
   useEffect(() => {
     let active = true;
-    loadSantaDraft(email).then((draft) => {
+    loadSantaDraft(draftOwner).then((draft) => {
       if (!active) return;
       if (draft) {
         setDeliveryEmail(draft.deliveryEmail ?? "");
@@ -87,7 +108,7 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
     return () => {
       active = false;
     };
-  }, [email]);
+  }, [draftOwner]);
 
   useEffect(() => {
     if (!waitingForPayment || polls >= CONFIRM_POLL_MAX) return;
@@ -138,15 +159,18 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
   // Avant d'ouvrir le paiement : la commande doit survivre au passage sur Mollie.
   async function pay() {
     if (!photo || !checkOrder()) return;
-    await saveSantaDraft({ owner: email, deliveryEmail: recipient, childName: name, gifts: list, photo: photo.file });
+    await saveSantaDraft({ owner: draftOwner, deliveryEmail: recipient, childName: name, gifts: list, photo: photo.file });
     setBuying(true);
   }
 
   async function createVideo() {
     if (!photo || !checkOrder()) return;
+    setAutoTried(true);
     // Plus de retour de paiement dans l'adresse : ni un échec ni un rechargement
     // ne relancent la création, et l'achat n'est plus annoncé comme en attente.
-    window.history.replaceState(null, "", window.location.pathname);
+    // Sans compte, l'achat n'est connu que par l'adresse : elle reste jusqu'à
+    // ce que la vidéo soit créée.
+    if (!guest) window.history.replaceState(null, "", window.location.pathname);
     setResult(null);
     setBusy(true);
     const body = new FormData();
@@ -156,9 +180,11 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
     const shrunk = await shrinkPhoto(photo.file, PROMPT_RULES.maxImageSidePx);
     body.append("photos", new File([shrunk], "enfant.jpg", { type: "image/jpeg" }));
     body.append("consent", String(consent));
+    if (guest?.paymentId) body.append("payment", guest.paymentId);
     const res = await fetch(`/api/effets/${SANTA_EFFECT.slug}`, { method: "POST", body }).catch(() => null);
     const data = await res?.json().catch(() => null);
     if (res?.ok && data?.url) {
+      if (guest) window.history.replaceState(null, "", window.location.pathname);
       await clearSantaDraft();
       setResult({ url: data.url, emailedTo: data.emailNotification === true ? String(data.emailedTo ?? recipient) : null });
     } else {
@@ -226,7 +252,11 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
 
         {result && (
           <div className="mt-10 space-y-3">
-            {result.emailedTo ? (
+            {result.earlier ? (
+              <p className="text-center text-base text-secondary sm:text-sm">
+                Ta vidéo est prête. Elle t&apos;a aussi été envoyée par email.
+              </p>
+            ) : result.emailedTo ? (
               <p className="text-center text-base text-secondary sm:text-sm">
                 Elle t&apos;a aussi été envoyée à <strong className="text-foreground">{result.emailedTo}</strong>.
               </p>
@@ -400,7 +430,16 @@ export function SantaForm({ email, balance, purchases }: { email: string; balanc
               <span className="max-sm:block max-sm:text-sm max-sm:font-medium max-sm:opacity-85">{formatTokens(cost)}</span>
             </button>
           )}
-          {!paid && (
+          {!paid && !email && (
+            <p className="text-center text-sm text-secondary">
+              Sans compte ni inscription. Tu as des tokens ?{" "}
+              <Link href={`/connexion?next=/effets/${SANTA_EFFECT.slug}`} className="underline underline-offset-4">
+                Connecte-toi
+              </Link>{" "}
+              pour les utiliser.
+            </p>
+          )}
+          {!paid && email && (
             <p className="text-center text-sm text-secondary">
               {enoughTokens ? (
                 <>Ton solde : {formatTokens(balance)}.</>

@@ -1,6 +1,6 @@
 import { SANTA_EFFECT, checkDeliveryEmail, cleanText } from "@/config/effects";
 import { accountSuspendedMessage } from "@/config/product";
-import { createVideoPayment } from "@/lib/mollie";
+import { createGuestVideoPayment, createVideoPayment } from "@/lib/mollie";
 import { checkSantaTexts } from "@/lib/santa-text";
 import { siteUrl } from "@/lib/site-url";
 import { currentUser } from "@/lib/supabase";
@@ -10,13 +10,13 @@ import { getAccount } from "@/lib/tokens";
 // une fois le formulaire rempli. La photo reste dans le navigateur ; le prénom et
 // les cadeaux sont contrôlés ici : le client ne doit jamais payer une commande
 // que le rendu refuserait. Le prix vient de la config, jamais de la requête.
+// Sans compte : le paiement n'est lié à rien chez nous (src/lib/guest-video.ts).
 export async function POST(request: Request) {
   const user = await currentUser();
-  if (!user) return Response.json({ error: "Connecte-toi d'abord." }, { status: 401 });
 
   const body = (await request.json().catch(() => null)) as { waiver?: unknown; deliveryEmail?: unknown; childName?: unknown; gifts?: unknown } | null;
   try {
-    if ((await getAccount(user.id)).blocked) return Response.json({ error: accountSuspendedMessage() }, { status: 403 });
+    if (user && (await getAccount(user.id)).blocked) return Response.json({ error: accountSuspendedMessage() }, { status: 403 });
     // Même renonciation que pour les tokens (art. L221-28 du Code de la consommation).
     if (body?.waiver !== true) {
       return Response.json({ error: "Coche la case d'accès immédiat pour continuer." }, { status: 400 });
@@ -27,7 +27,8 @@ export async function POST(request: Request) {
       (await checkSantaTexts(cleanText(String(body.childName ?? "")), gifts));
     if (problem) return Response.json({ error: problem }, { status: 400 });
 
-    const url = await createVideoPayment(user, SANTA_EFFECT, `${siteUrl(request)}/effets/${SANTA_EFFECT.slug}?achat=ok`);
+    const back = `${siteUrl(request)}/effets/${SANTA_EFFECT.slug}?achat=ok`;
+    const url = user ? await createVideoPayment(user, SANTA_EFFECT, back) : await createGuestVideoPayment(SANTA_EFFECT, back);
     return Response.json({ url });
   } catch (err) {
     console.error(err);

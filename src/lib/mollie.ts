@@ -54,11 +54,14 @@ type Metadata = {
   tokens?: number;
   // Achat d'une vidéo à l'unité.
   effect?: string;
+  // Vidéo achetée sans compte (src/lib/guest-video.ts).
+  guest?: boolean;
 } | null;
 
 type MolliePayment = {
   id: string;
   status: string;
+  paidAt?: string;
   customerId?: string;
   mandateId?: string;
   subscriptionId?: string;
@@ -218,6 +221,44 @@ export async function createVideoPayment(
   return checkoutUrl(payment);
 }
 
+// Achat d'une vidéo à l'unité sans compte : rien n'est enregistré chez nous,
+// le paiement Mollie fait foi (src/lib/guest-video.ts), relu à chaque usage :
+// pas de webhook. Son identifiant est ajouté à l'adresse de retour, une fois
+// connu, pour que le navigateur du client le retrouve.
+export async function createGuestVideoPayment(
+  effect: { id: string; title: string; priceEur: number },
+  redirectUrl: string,
+): Promise<string> {
+  const payment = await mollie<MolliePayment>("POST", "/payments", {
+    amount: euros(effect.priceEur),
+    description: `Cosmos Generator, ${effect.title}`,
+    sequenceType: "oneoff",
+    redirectUrl,
+    locale: "fr_FR",
+    metadata: { kind: "video", guest: true, effect: effect.id, waiver_accepted_at: new Date().toISOString() },
+  });
+  const separator = redirectUrl.includes("?") ? "&" : "?";
+  await mollie("PATCH", `/payments/${payment.id}`, { redirectUrl: `${redirectUrl}${separator}paiement=${payment.id}` });
+  return checkoutUrl(payment);
+}
+
+export type GuestVideoPayment = { status: "paid" | "pending" | "invalid"; paidAt: number | null };
+
+// État d'un achat sans compte, relu chez Mollie : jamais ce que dit le navigateur.
+export async function guestVideoPayment(paymentId: string, effect: string): Promise<GuestVideoPayment> {
+  if (!/^tr_[A-Za-z0-9]{4,40}$/.test(paymentId)) return { status: "invalid", paidAt: null };
+  const payment = await mollie<MolliePayment>("GET", `/payments/${paymentId}?embed=chargebacks`).catch((err) => {
+    if (err instanceof MollieError && (err.status === 404 || err.status === 410)) return null;
+    throw err;
+  });
+  const meta = payment?.metadata;
+  if (!payment || meta?.kind !== "video" || meta.guest !== true || meta.effect !== effect || isChargedBack(payment)) {
+    return { status: "invalid", paidAt: null };
+  }
+  if (payment.status === "paid") return { status: "paid", paidAt: Date.parse(payment.paidAt ?? "") || Date.now() };
+  return { status: ["open", "pending", "authorized"].includes(payment.status) ? "pending" : "invalid", paidAt: null };
+}
+
 const subscriptionDescription =(interval: BillingInterval, startDate: string) =>
   `Cosmos Generator, abonnement ${INTERVAL_LABEL[interval]} du ${startDate}`;
 
@@ -369,6 +410,13 @@ export async function handlePaymentWebhook(paymentId: string): Promise<void> {
   const payment = await mollie<MolliePayment>("GET", `/payments/${paymentId}?embed=chargebacks`);
   // En premier : après une rétrofacturation, le paiement reste "paid" et le
   // rappel relancerait sinon le traitement d'un paiement normal.
+  // Vidéo achetée sans compte : rien à créditer ni à bloquer, le paiement
+  // n'ouvre droit qu'à sa vidéo (src/lib/guest-video.ts), refusée après une
+  // rétrofacturation.
+  if (payment.metadata?.guest === true) {
+    if (isChargedBack(payment)) console.error(`Rétrofacturation sur l'achat sans compte ${payment.id}.`);
+    return;
+  }
   if (isChargedBack(payment)) return blockForChargeback(payment);
 
   const userId = await paymentUserId(payment);
