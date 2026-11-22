@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { FreeModelPopup } from "@/components/FreeModelPopup";
 import { Fresco } from "@/components/Fresco";
 import { GlassTilt } from "@/components/GlassTilt";
 import { LiquidGlassDefs } from "@/components/LiquidGlassDefs";
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <FreeModelPopup />
       </body>
     </html>
   );
