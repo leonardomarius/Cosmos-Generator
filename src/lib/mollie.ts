@@ -62,6 +62,9 @@ type MolliePayment = {
   id: string;
   status: string;
   paidAt?: string;
+  createdAt?: string;
+  amount?: Amount;
+  amountRefunded?: Amount;
   customerId?: string;
   mandateId?: string;
   subscriptionId?: string;
@@ -257,6 +260,55 @@ export async function guestVideoPayment(paymentId: string, effect: string): Prom
   }
   if (payment.status === "paid") return { status: "paid", paidAt: Date.parse(payment.paidAt ?? "") || Date.now() };
   return { status: ["open", "pending", "authorized"].includes(payment.status) ? "pending" : "invalid", paidAt: null };
+}
+
+export type PaidSale = {
+  id: string;
+  paidAt: Date;
+  amountEur: number;
+  kind: "pack" | "video" | "subscription" | "renewal" | "upgrade" | "other";
+  tokens: number | null;
+  guest: boolean;
+  plan: string | null;
+};
+
+// Ventes encaissées depuis "since", pour les statistiques de /admin. Mollie
+// les liste de la plus récente à la plus ancienne, par pages de 250.
+// Montant net des remboursements.
+export async function listPaidSales(since: Date): Promise<PaidSale[]> {
+  const sales: PaidSale[] = [];
+  let path: string | null = "/payments?limit=250";
+  for (let page = 0; path && page < 40; page++) {
+    const list: { _embedded: { payments: MolliePayment[] }; _links: { next?: { href: string } | null } } = await mollie("GET", path);
+    let older = false;
+    for (const payment of list._embedded.payments) {
+      if (Date.parse(payment.createdAt ?? "") < since.getTime()) {
+        older = true;
+        continue;
+      }
+      if (payment.status !== "paid" || !payment.paidAt) continue;
+      const meta = payment.metadata;
+      const kind: PaidSale["kind"] = payment.subscriptionId
+        ? "renewal"
+        : meta?.kind === "first"
+          ? "subscription"
+          : meta?.kind === "pack" || meta?.kind === "video" || meta?.kind === "upgrade"
+            ? meta.kind
+            : "other";
+      sales.push({
+        id: payment.id,
+        paidAt: new Date(payment.paidAt),
+        amountEur: Number(payment.amount?.value ?? 0) - Number(payment.amountRefunded?.value ?? 0),
+        kind,
+        tokens: kind === "pack" && typeof meta?.tokens === "number" ? meta.tokens : null,
+        guest: meta?.guest === true,
+        plan: meta?.plan ?? null,
+      });
+    }
+    const next = list._links.next?.href;
+    path = older || !next ? null : next.replace(API, "");
+  }
+  return sales;
 }
 
 const subscriptionDescription =(interval: BillingInterval, startDate: string) =>

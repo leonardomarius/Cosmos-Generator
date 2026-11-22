@@ -1,9 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+import { recordSiteVisit } from "@/lib/site-visits";
 
 // Rafraîchit la session Supabase avant chaque page : les pages (composants
-// serveur) peuvent lire les cookies mais pas les réécrire.
-export async function proxy(request: NextRequest) {
+// serveur) peuvent lire les cookies mais pas les réécrire. Compte aussi la
+// visite pour /admin (src/lib/site-visits.ts), après la réponse.
+export async function proxy(request: NextRequest, event: NextFetchEvent) {
+  event.waitUntil(recordSiteVisit(request).catch((err) => console.error("Visite non comptée", err)));
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

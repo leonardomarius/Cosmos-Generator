@@ -151,6 +151,8 @@ export type Database = {
         { key: string; window_start: string; hits: number },
         { key: string; window_start: string; hits?: number }
       >;
+      site_visitors: Table<{ day: string; visitor: string; views: number }, { day: string; visitor: string; views?: number }>;
+      site_page_views: Table<{ day: string; path: string; views: number }, { day: string; path: string; views?: number }>;
     };
     Views: Record<never, never>;
     Functions: {
@@ -167,6 +169,8 @@ export type Database = {
       user_has_paid: { Args: { p_user: string }; Returns: boolean };
       hit_rate_limit: { Args: { p_key: string; p_window_seconds: number; p_max: number }; Returns: boolean };
       auth_email_exists: { Args: { p_email: string }; Returns: boolean };
+      record_site_visit: { Args: { p_day: string; p_visitor: string; p_path: string }; Returns: undefined };
+      site_visit_days: { Args: { p_since: string }; Returns: { day: string; visitors: number; views: number }[] };
     };
     Enums: Record<never, never>;
     CompositeTypes: Record<never, never>;
