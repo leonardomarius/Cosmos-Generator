@@ -94,6 +94,56 @@ export function ImageGenerationCard() {
   );
 }
 
+// Vitrine : le même chaton chevalier dans deux scènes (rendus WanGP du
+// 2026-11-21 et du 2026-11-22). Dès 768 px, les deux cartes partagent une
+// rangée à la même hauteur : chacune grandit selon le format de sa vidéo
+// (16/9, 9/16) au-delà d'une base égale à son padding (2 × 0,5 rem).
+// En dessous, elles s'empilent et la verticale reste étroite (15 rem).
+const SHOWCASE_CARD = "liquid-glass liquid-glass--interactive group block rounded-[32px] p-2";
+
+export function VideoShowcase() {
+  return (
+    <div className="flex flex-col gap-5 md:flex-row">
+      <ChatLink kind="video" className={`${SHOWCASE_CARD} md:[flex:1.7778_1_1rem]`}>
+        <ShowcaseVideo
+          src="/exemples/chat-chevalier-defile"
+          label="Un chaton en armure de chevalier, lunettes de soleil sur le nez, assis au premier rang d'un défilé de mode parmi les invités"
+          ratio="aspect-video"
+        />
+        <span className="sr-only">Créer une vidéo</span>
+      </ChatLink>
+      <ChatLink kind="star" className={`${SHOWCASE_CARD} mx-auto w-full max-w-[15rem] md:mx-0 md:max-w-none md:[flex:0.5625_1_1rem]`}>
+        <ShowcaseVideo
+          src="/exemples/chat-chevalier-suv"
+          label="Filmé au-dessus de la foule, le chaton chevalier descend d'un SUV noir entre ses gardes du corps, devant des fans qui le filment"
+          ratio="aspect-[9/16]"
+        />
+        <span className="sr-only">Créer ma vidéo de star</span>
+      </ChatLink>
+    </div>
+  );
+}
+
+function ShowcaseVideo({ src, label, ratio }: { src: string; label: string; ratio: string }) {
+  return (
+    <div className={`relative ${ratio} overflow-hidden rounded-[24px] bg-foreground/8`}>
+      <video
+        src={`${src}.mp4`}
+        poster={`${src}.jpg`}
+        aria-label={label}
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="h-full w-full object-cover transition-transform duration-700 ease-(--ease-soft) group-hover:scale-[1.03]"
+      />
+      <span className="absolute bottom-3 right-3 whitespace-nowrap rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">
+        Généré par Cosmos
+      </span>
+    </div>
+  );
+}
+
 function CardBody({
   title,
   text,
