@@ -12,6 +12,11 @@ export default function Home() {
   return (
     <ViewTransition exit={{ "to-chat": "home-exit", default: "none" }} default="none">
       <div className="mx-auto max-w-5xl px-5 pb-20 pt-14 sm:pt-20">
+        {/* Vitrine des presets, tout en haut : aucune description. */}
+        <section className="mb-section">
+          <VideoShowcase />
+        </section>
+
         <Suspense fallback={<WelcomeSlotPlaceholder />}>
           <WelcomeSlot />
         </Suspense>
@@ -28,17 +33,6 @@ export default function Home() {
 
         <section className="mt-section">
           <ImageGenerationCard />
-        </section>
-
-        <section className="mt-section">
-          <h2 className="text-center text-title font-semibold">Ton héros, dans toutes les scènes</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-center text-lg leading-relaxed text-secondary">
-            Le même chaton chevalier au premier rang d&apos;un défilé, puis à la
-            sortie de son SUV. Tout est généré par Cosmos.
-          </p>
-          <div className="mt-10">
-            <VideoShowcase />
-          </div>
         </section>
 
         <section className="mx-auto mt-section max-w-3xl">

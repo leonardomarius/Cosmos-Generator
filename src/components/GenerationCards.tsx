@@ -138,7 +138,7 @@ function ShowcaseVideo({ src, label, ratio }: { src: string; label: string; rati
         className="h-full w-full object-cover transition-transform duration-700 ease-(--ease-soft) group-hover:scale-[1.03]"
       />
       <span className="absolute bottom-3 right-3 whitespace-nowrap rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white/85 backdrop-blur-md">
-        Généré par Cosmos
+        Preset
       </span>
     </div>
   );
